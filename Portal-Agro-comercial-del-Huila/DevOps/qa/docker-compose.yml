@@ -1,0 +1,30 @@
+services:
+  portal-agro-api-qa:
+    container_name: portal-agro-api-qa
+    build:
+      context: ../../../                # ← raíz del repo
+      dockerfile: Portal-Agro-comercial-del-Huila/Web/Dockerfile
+    image: portal-agro-api-qa:latest
+    restart: always
+    environment:
+      # ===== SMTP / Gmail =====
+      - CONFIG_EMAIL__EMAIL=portalagrocomercialhuila@gmail.com
+      - CONFIG_EMAIL__HOST=smtp.gmail.com
+      - CONFIG_EMAIL__PORT=587
+      # ATENCIÓN: las contraseñas de app de Google se usan SIN espacios
+      - CONFIG_EMAIL__PASSWORD=qtckwqqwgnmarosr
+      # 587 => STARTTLS
+      - CONFIG_EMAIL__USESTARTTLS=true
+      - CONFIG_EMAIL__USESSL=false
+    env_file:
+      - .env
+    ports:
+      - "5101:8080"
+    networks:
+      - portal-agro_network
+    labels:
+      - com.portalagro.environment=qa
+
+networks:
+  portal-agro_network:
+    external: true
