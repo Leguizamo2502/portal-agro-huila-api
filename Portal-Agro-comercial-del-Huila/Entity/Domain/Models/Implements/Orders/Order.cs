@@ -63,5 +63,6 @@ namespace Entity.Domain.Models.Implements.Orders
         public User User { get; set; } = null!;
         public Product Product { get; set; } = null!;
         public City City { get; set; } = null!;
+        public ConsumerRating? ConsumerRating { get; set; }
     }
 }

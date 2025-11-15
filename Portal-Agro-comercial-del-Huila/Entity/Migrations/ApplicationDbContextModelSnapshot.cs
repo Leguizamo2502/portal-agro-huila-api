@@ -1022,6 +1022,51 @@ namespace Entity.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ConsumerRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProducerId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Rating")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.HasIndex("ProducerId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConsumerRatings");
+                });
+
             modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -3766,6 +3811,33 @@ namespace Entity.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ConsumerRating", b =>
+                {
+                    b.HasOne("Entity.Domain.Models.Implements.Orders.Order", "Order")
+                        .WithOne("ConsumerRating")
+                        .HasForeignKey("Entity.Domain.Models.Implements.Orders.ConsumerRating", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Entity.Domain.Models.Implements.Producers.Producer", "Producer")
+                        .WithMany("ConsumerRatings")
+                        .HasForeignKey("ProducerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Entity.Domain.Models.Implements.Auth.User", "User")
+                        .WithMany("ConsumerRatingsReceived")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Producer");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.Order", b =>
                 {
                     b.HasOne("Entity.Domain.Models.Implements.Location.City", "City")
@@ -3996,6 +4068,8 @@ namespace Entity.Migrations
 
             modelBuilder.Entity("Entity.Domain.Models.Implements.Auth.User", b =>
                 {
+                    b.Navigation("ConsumerRatingsReceived");
+
                     b.Navigation("Favorites");
 
                     b.Navigation("Notifications");
@@ -4021,6 +4095,11 @@ namespace Entity.Migrations
                     b.Navigation("Cities");
                 });
 
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.Order", b =>
+                {
+                    b.Navigation("ConsumerRating");
+                });
+
             modelBuilder.Entity("Entity.Domain.Models.Implements.Producers.Farm", b =>
                 {
                     b.Navigation("FarmImages");
@@ -4030,6 +4109,8 @@ namespace Entity.Migrations
 
             modelBuilder.Entity("Entity.Domain.Models.Implements.Producers.Producer", b =>
                 {
+                    b.Navigation("ConsumerRatings");
+
                     b.Navigation("Farms");
 
                     b.Navigation("Products");
