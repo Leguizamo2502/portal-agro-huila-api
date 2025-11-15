@@ -201,6 +201,7 @@ namespace Entity.Infrastructure.Context
 
         //Order
         public DbSet<Order> Orders { get; set; }
+        public DbSet<ConsumerRating> ConsumerRatings { get; set; }
 
         //Notifications
         public DbSet<Notification> Notifications { get; set; }

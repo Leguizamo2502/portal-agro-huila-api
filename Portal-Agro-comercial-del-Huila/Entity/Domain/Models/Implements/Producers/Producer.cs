@@ -1,5 +1,6 @@
 ﻿using Entity.Domain.Models.Base;
 using Entity.Domain.Models.Implements.Auth;
+using Entity.Domain.Models.Implements.Orders;
 using Entity.Domain.Models.Implements.Producers.Products;
 
 namespace Entity.Domain.Models.Implements.Producers
@@ -14,6 +15,7 @@ namespace Entity.Domain.Models.Implements.Producers
         public ICollection<Farm> Farms { get; set; } = [];
         public ICollection<Product> Products { get; set; } = [];
         public ICollection<ProducerSocialLink> SocialLinks { get; set; } = [];
+        public ICollection<ConsumerRating> ConsumerRatings { get; set; } = [];
 
     }
 }
