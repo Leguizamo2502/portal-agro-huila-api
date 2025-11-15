@@ -8,6 +8,7 @@ using Entity.Domain.Models.Implements.Security;
 using Entity.DTOs.Auth;
 using Entity.DTOs.Auth.User;
 using Entity.DTOs.Notifications;
+using Entity.DTOs.Order.ConsumerRatings.Select;
 using Entity.DTOs.Order.Create;
 using Entity.DTOs.Order.Reviews;
 using Entity.DTOs.Order.Select;
@@ -75,7 +76,12 @@ namespace Business.Mapping
             config.NewConfig<Review, ReviewSelectDto>()
                 .Map(dest => dest.UserName, src => $"{src.User.Person.FirstName} {src.User.Person.LastName}");
 
-            
+            config.NewConfig<ConsumerRating, ConsumerRatingSelectDto>()
+                .Map(dest => dest.CustomerFullName, src => $"{src.User.Person.FirstName} {src.User.Person.LastName}")
+                .Map(dest => dest.CustomerEmail, src => src.User.Email)
+                .Map(dest => dest.CreateAt, src => src.CreateAt);
+
+
 
 
 
@@ -232,7 +238,8 @@ namespace Business.Mapping
                   .Map(d => d.AdditionalNotes, s => s.AdditionalNotes)
                   .Map(d => d.UserReceivedAt, s => s.UserReceivedAt)
                   .Map(d => d.CreateAt, s => s.CreateAt)
-                  .Map(d => d.RowVersion, s => Convert.ToBase64String(s.RowVersion ?? Array.Empty<byte>()));
+                  .Map(d => d.RowVersion, s => Convert.ToBase64String(s.RowVersion ?? Array.Empty<byte>()))
+                  .Map(d => d.ConsumerRating, s => s.ConsumerRating);
 
 
             //Category

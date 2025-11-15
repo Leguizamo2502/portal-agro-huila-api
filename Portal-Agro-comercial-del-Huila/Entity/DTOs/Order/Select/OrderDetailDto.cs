@@ -1,4 +1,5 @@
 ﻿using Entity.DTOs.BaseDTO;
+using Entity.DTOs.Order.ConsumerRatings.Select;
 
 namespace Entity.DTOs.Order.Select
 {
@@ -45,5 +46,8 @@ namespace Entity.DTOs.Order.Select
         // Metadatos
         public DateTime CreateAt { get; set; }
         public string RowVersion { get; set; } = string.Empty; // Base64
+        public ConsumerRatingSelectDto? ConsumerRating { get; set; }
+        public double? CustomerAverageRating { get; set; }
+        public int CustomerRatingsCount { get; set; }
     }
 }

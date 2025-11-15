@@ -23,6 +23,7 @@ namespace Entity.Domain.Models.Implements.Auth
         public ICollection<Review> Reviews { get; set; } = [];
         public ICollection<Order> Orders { get; set; } = [];
         public ICollection<Notification> Notifications { get; set; } = [];
+        public ICollection<ConsumerRating> ConsumerRatingsReceived { get; set; } = [];
 
 
 
