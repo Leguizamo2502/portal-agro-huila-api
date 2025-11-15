@@ -1,4 +1,6 @@
 ﻿using Business.Interfaces.Implements.Orders;
+using Business.Interfaces.Implements.Orders.ConsumerRatings;
+using Entity.DTOs.Order.ConsumerRatings.Create;
 using Entity.DTOs.Order.Create;
 using Entity.DTOs.Order.Select;
 using Microsoft.AspNetCore.Authorization;
@@ -16,15 +18,18 @@ namespace Web.Controllers.Implements.Orders
         private readonly ILogger<OrderProducerController> _logger;
         private readonly IOrderService _orderService;
         private readonly IOrderReadService _orderReadService;
+        private readonly IConsumerRatingService _consumerRatingService;
 
         public OrderProducerController(
             ILogger<OrderProducerController> logger,
             IOrderService orderService,
-            IOrderReadService orderReadService)
+            IOrderReadService orderReadService,
+            IConsumerRatingService consumerRatingService)
         {
             _logger = logger;
             _orderService = orderService;
             _orderReadService = orderReadService;
+            _consumerRatingService = consumerRatingService;
         }
 
         // GET: api/v1/orders/producer
@@ -191,6 +196,47 @@ namespace Web.Controllers.Implements.Orders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error inesperado al marcar 'entregado'");
+                return StatusCode(500, new { IsSuccess = false, Message = "Error inesperado.", Detail = ex.Message });
+            }
+        }
+        // POST: api/v1/orders/producer/{code}/rate-customer
+        [HttpPost("{code}/rate-customer")]
+        public async Task<IActionResult> RateCustomer(string code, [FromBody] ConsumerRatingCreateDto dto)
+        {
+            try
+            {
+                var userId = HttpContext.GetUserId();
+                var rating = await _consumerRatingService.RateCustomerAsync(userId, code, dto);
+                return Ok(new { IsSuccess = true, Data = rating });
+            }
+            catch (BusinessException ex)
+            {
+                return BadRequest(new { IsSuccess = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al calificar al cliente");
+                return StatusCode(500, new { IsSuccess = false, Message = "Error inesperado.", Detail = ex.Message });
+            }
+        }
+
+        // GET: api/v1/orders/producer/{code}/rate-customer
+        [HttpGet("{code}/rate-customer")]
+        public async Task<IActionResult> GetCustomerRating(string code)
+        {
+            try
+            {
+                var userId = HttpContext.GetUserId();
+                var rating = await _consumerRatingService.GetRatingForOrderAsync(userId, code);
+                return Ok(new { IsSuccess = true, Data = rating });
+            }
+            catch (BusinessException ex)
+            {
+                return BadRequest(new { IsSuccess = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al obtener la calificación del cliente");
                 return StatusCode(500, new { IsSuccess = false, Message = "Error inesperado.", Detail = ex.Message });
             }
         }

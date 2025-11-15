@@ -1,6 +1,10 @@
 ﻿using Business.Interfaces.Implements.Orders;
+using Business.Interfaces.Implements.Orders.ConsumerRatings;
 using Data.Interfaces.Implements.Orders;
 using Data.Interfaces.Implements.Producers;
+using Entity.Domain.Models.Implements.Orders;
+using Entity.DTOs.Order.ConsumerRatings;
+using Entity.DTOs.Order.ConsumerRatings.Select;
 using Entity.DTOs.Order.Select;
 using MapsterMapper;
 using Utilities.Exceptions;
@@ -11,13 +15,15 @@ namespace Business.Services.Orders
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IProducerRepository _producerRepository;
+        private readonly IConsumerRatingService _consumerRatingService;
         private readonly IMapper _mapper;
-        public OrderReadService(IOrderRepository orderRepository,IProducerRepository producerRepository, IMapper mapper)
+        public OrderReadService(IOrderRepository orderRepository, IProducerRepository producerRepository, IConsumerRatingService consumerRatingService, IMapper mapper)
         {
             _orderRepository = orderRepository;
             _producerRepository = producerRepository;
+            _consumerRatingService = consumerRatingService;
             _mapper = mapper;
-            
+
         }
         public async Task<OrderDetailDto> GetOrderDetailForProducerAsync(int userId, string code)
         {
@@ -33,7 +39,9 @@ namespace Business.Services.Orders
             if (order.ProducerIdSnapshot != producerId)
                 throw new BusinessException("No está autorizado para ver esta orden.");
 
-            return _mapper.Map<OrderDetailDto>(order);
+            var dto = _mapper.Map<OrderDetailDto>(order);
+            await EnrichWithCustomerRatingAsync(order, dto);
+            return dto;
         }
 
         /// <summary>
@@ -54,7 +62,9 @@ namespace Business.Services.Orders
             if (order.UserId != userId)
                 throw new BusinessException("No está autorizado para ver esta orden.");
 
-            return _mapper.Map<OrderDetailDto>(order);
+            var dto = _mapper.Map<OrderDetailDto>(order);
+            await EnrichWithCustomerRatingAsync(order, dto);
+            return dto;
         }
 
 
@@ -93,6 +103,14 @@ namespace Business.Services.Orders
 
             var entities = await _orderRepository.GetPendingOrdersByProducerAsync(producerId);
             return _mapper.Map<IEnumerable<OrderListItemDto>>(entities);
+        }
+
+        private async Task EnrichWithCustomerRatingAsync(Order order, OrderDetailDto dto)
+        {
+            var stats = await _consumerRatingService.GetCustomerStatsAsync(order.UserId);
+            dto.CustomerAverageRating = stats.AverageRating;
+            dto.CustomerRatingsCount = stats.RatingsCount;
+            dto.ConsumerRating = dto.ConsumerRating ?? _mapper.Map<ConsumerRatingSelectDto?>(order.ConsumerRating);
         }
 
     }
