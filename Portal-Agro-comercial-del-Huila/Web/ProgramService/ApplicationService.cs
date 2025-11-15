@@ -3,6 +3,7 @@ using Business.Interfaces.Implements.Auth;
 using Business.Interfaces.Implements.Location;
 using Business.Interfaces.Implements.Notification;
 using Business.Interfaces.Implements.Orders;
+using Business.Interfaces.Implements.Orders.ConsumerRatings;
 using Business.Interfaces.Implements.Orders.Reviews;
 using Business.Interfaces.Implements.Producers;
 using Business.Interfaces.Implements.Producers.Analitics;
@@ -17,6 +18,7 @@ using Business.Services.AuthService;
 using Business.Services.Location;
 using Business.Services.Notifications;
 using Business.Services.Orders;
+using Business.Services.Orders.ConsumerRatings;
 using Business.Services.Orders.Reviews;
 using Business.Services.Producers;
 using Business.Services.Producers.Analytics;
@@ -30,6 +32,7 @@ using Data.Interfaces.Implements.Favorites;
 using Data.Interfaces.Implements.Location;
 using Data.Interfaces.Implements.Notifications;
 using Data.Interfaces.Implements.Orders;
+using Data.Interfaces.Implements.Orders.ConsumerRatings;
 using Data.Interfaces.Implements.Orders.Reviews;
 using Data.Interfaces.Implements.Producers;
 using Data.Interfaces.Implements.Producers.Analytics;
@@ -47,6 +50,7 @@ using Data.Service.Favorites;
 using Data.Service.Location;
 using Data.Service.Notifications;
 using Data.Service.Orders;
+using Data.Service.Orders.ConsumerRatings;
 using Data.Service.Orders.Reviews;
 using Data.Service.Producers;
 using Data.Service.Producers.Analytics;
@@ -132,6 +136,9 @@ namespace Web.ProgramService
 
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<IReviewService, ReviewService>();
+
+            services.AddScoped<IConsumerRatingRepository, ConsumerRatingRepository>();
+            services.AddScoped<IConsumerRatingService, ConsumerRatingService>();
 
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderService, OrderService>();
