@@ -96,8 +96,14 @@ namespace Data.Service.Orders
         {
             return await _dbSet
                 .AsNoTracking()
+                .Include(o => o.User)
+                    .ThenInclude(u => u.Person)
+                .Include(o => o.ConsumerRating)
+                    .ThenInclude(r => r.User)
+                        .ThenInclude(u => u.Person)
                 .Include(o => o.City)
                     .ThenInclude(c => c.Department)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(o => o.IsDeleted == false && o.Active == true && o.Code == code);
         }
     }
