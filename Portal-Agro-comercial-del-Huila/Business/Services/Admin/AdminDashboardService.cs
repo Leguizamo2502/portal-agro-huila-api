@@ -23,21 +23,19 @@ namespace Business.Services.Admin
         {
             var safeLimit = NormalizeLimit(top);
 
-            var orderFunnelTask = _dashboardReadRepository.GetOrderFunnelAsync(ct);
-            var paymentTask = _dashboardReadRepository.GetPaymentSummaryAsync(ct);
-            var catalogTask = _dashboardReadRepository.GetCatalogSummaryAsync(ct);
-            var topProducersTask = _dashboardReadRepository.GetTopProducersAsync(safeLimit, ct);
-            var topProductsTask = _dashboardReadRepository.GetTopProductsAsync(safeLimit, ct);
-
-            await Task.WhenAll(orderFunnelTask, paymentTask, catalogTask, topProducersTask, topProductsTask);
+            var orderFunnel = await _dashboardReadRepository.GetOrderFunnelAsync(ct);
+            var payment = await _dashboardReadRepository.GetPaymentSummaryAsync(ct);
+            var catalog = await _dashboardReadRepository.GetCatalogSummaryAsync(ct);
+            var topProducers = await _dashboardReadRepository.GetTopProducersAsync(safeLimit, ct);
+            var topProducts = await _dashboardReadRepository.GetTopProductsAsync(safeLimit, ct);
 
             return new AdminDashboardDto
             {
-                OrderFunnel = orderFunnelTask.Result,
-                Payments = paymentTask.Result,
-                Catalog = catalogTask.Result,
-                TopProducers = topProducersTask.Result,
-                TopProducts = topProductsTask.Result
+                OrderFunnel = orderFunnel,
+                Payments = payment,
+                Catalog = catalog,
+                TopProducers = topProducers,
+                TopProducts = topProducts
             };
         }
 

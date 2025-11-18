@@ -86,40 +86,38 @@ namespace Data.Service.Dashboards
 
         public async Task<CatalogSummaryDto> GetCatalogSummaryAsync(CancellationToken ct = default)
         {
-            var activeProducersTask = _context.Producers
+            var activeProducers = await _context.Producers
                 .AsNoTracking()
                 .CountAsync(p => !p.IsDeleted && p.Active, ct);
 
-            var totalProductsTask = _context.Products
+            var totalProducts = await _context.Products
                 .AsNoTracking()
                 .CountAsync(p => !p.IsDeleted, ct);
 
-            var publishedProductsTask = _context.Products
+            var publishedProducts = await _context.Products
                 .AsNoTracking()
                 .CountAsync(p => !p.IsDeleted && p.Active && p.Status, ct);
 
-            var lowStockTask = _context.Products
+            var lowStock = await _context.Products
                 .AsNoTracking()
                 .CountAsync(p => !p.IsDeleted && p.Active && p.Stock <= LowStockThreshold, ct);
 
-            var categoriesTask = _context.Category
+            var categories = await _context.Category
                 .AsNoTracking()
                 .CountAsync(c => !c.IsDeleted && c.Active, ct);
 
-            var favoritesTask = _context.Favorites
+            var favorites = await _context.Favorites
                 .AsNoTracking()
                 .CountAsync(f => !f.IsDeleted && f.Active, ct);
 
-            await Task.WhenAll(activeProducersTask, totalProductsTask, publishedProductsTask, lowStockTask, categoriesTask, favoritesTask);
-
             return new CatalogSummaryDto
             {
-                ActiveProducers = activeProducersTask.Result,
-                TotalProducts = totalProductsTask.Result,
-                PublishedProducts = publishedProductsTask.Result,
-                LowStockProducts = lowStockTask.Result,
-                Categories = categoriesTask.Result,
-                Favorites = favoritesTask.Result
+                ActiveProducers = activeProducers,
+                TotalProducts = totalProducts,
+                PublishedProducts = publishedProducts,
+                LowStockProducts = lowStock,
+                Categories = categories,
+                Favorites = favorites
             };
         }
 
@@ -127,13 +125,19 @@ namespace Data.Service.Dashboards
         {
             limit = NormalizeLimit(limit);
 
-            var query =
+            // 1) Query de agregación pura (todo traducible a SQL)
+            var baseQuery =
                 from order in _context.Orders.AsNoTracking()
-                where !order.IsDeleted && order.Active && order.Status == OrderStatus.Completed
-                join producer in _context.Producers.AsNoTracking() on order.ProducerIdSnapshot equals producer.Id
-                join user in _context.Users.AsNoTracking() on producer.UserId equals user.Id
-                join person in _context.Persons.AsNoTracking() on user.PersonId equals person.Id
-                group new { order, producer, person } by new
+                where !order.IsDeleted
+                      && order.Active
+                      && order.Status == OrderStatus.Completed
+                join producer in _context.Producers.AsNoTracking()
+                    on order.ProducerIdSnapshot equals producer.Id
+                join user in _context.Users.AsNoTracking()
+                    on producer.UserId equals user.Id
+                join person in _context.Persons.AsNoTracking()
+                    on user.PersonId equals person.Id
+                group order by new
                 {
                     producer.Id,
                     producer.Description,
@@ -141,18 +145,36 @@ namespace Data.Service.Dashboards
                     person.LastName
                 }
                 into g
-                orderby g.Sum(x => x.order.Total) descending, g.Sum(x => x.order.QuantityRequested) descending
-                select new TopProducerStatDto
+                select new
                 {
                     ProducerId = g.Key.Id,
-                    ProducerName = string.IsNullOrWhiteSpace(g.Key.Description)
-                        ? string.Join(" ", new[] { g.Key.FirstName, g.Key.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)))
-                        : g.Key.Description,
+                    Description = g.Key.Description,
+                    FirstName = g.Key.FirstName,
+                    LastName = g.Key.LastName,
                     CompletedOrders = g.Count(),
-                    TotalRevenue = g.Sum(x => x.order.Total)
+                    TotalRevenue = g.Sum(o => o.Total),
+                    TotalUnits = g.Sum(o => o.QuantityRequested)
                 };
 
-            return await query.Take(limit).ToListAsync(ct);
+            // 2) Orden + Take (sigue siendo SQL puro)
+            var data = await baseQuery
+                .OrderByDescending(x => x.TotalRevenue)
+                .ThenByDescending(x => x.TotalUnits)
+                .Take(limit)
+                .ToListAsync(ct);
+
+            // 3) Proyección a DTO en memoria (ya son pocos registros)
+            var result = data.Select(x => new TopProducerStatDto
+            {
+                ProducerId = x.ProducerId,
+                ProducerName = string.IsNullOrWhiteSpace(x.Description)
+                    ? string.Join(" ", new[] { x.FirstName, x.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                    : x.Description,
+                CompletedOrders = x.CompletedOrders,
+                TotalRevenue = x.TotalRevenue
+            });
+
+            return result;
         }
 
         public async Task<IEnumerable<TopProductStatDto>> GetTopProductsAsync(int limit, CancellationToken ct = default)
