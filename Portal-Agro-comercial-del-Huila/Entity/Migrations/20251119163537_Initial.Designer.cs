@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Entity.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251119135750_Initial")]
+    [Migration("20251119163537_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -1036,8 +1036,23 @@ namespace Entity.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("ChatClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChatClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ChatEnabledAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreateAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsChatEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");

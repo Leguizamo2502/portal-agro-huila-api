@@ -64,6 +64,7 @@ namespace Business.Services.Orders
             _orderEmailService = orderEmailService;
             _userRepository = userRepository;
             _producerRepository = producerRepository;
+            _orderChatService = orderChatService;
             _db = db;
             _producerRepository = producerRepository;
 
@@ -92,14 +93,12 @@ namespace Business.Services.Orders
             await _orderRepository.AddAsync(order);
             await _db.SaveChangesAsync();
 
-            await _orderChatService.EnsureConversationForOrderAsync(order.Id);
             //chat
             //await _orderChatService.AddSystemMessageAsync(order.Id, "Se creó el pedido. Puedes comunicarte con el productor por este medio.");
             await TryAddOrderChatSystemMessageAsync(
-               order.Id,
-               "Se creó el pedido. Puedes comunicarte con el productor por este medio.",
-               ensureConversation: true);
-            await SendOrderCreatedEmailsSafelyAsync(order);
+                order.Id,
+                "Se creó el pedido. Puedes comunicarte con el productor por este medio.",
+                ensureConversation: true);
 
             // FIX: Notificar al productor usando su UserId (no ProducerId)
             var producerUserId = await GetProducerUserIdAsync(order.ProducerIdSnapshot);
@@ -506,6 +505,8 @@ namespace Business.Services.Orders
                 await _orderRepository.UpdateOrderAsync(order);
                 await _db.SaveChangesAsync();
 
+                await TryCloseOrderChatAsync(order.Id, "El cliente canceló el pedido. El chat se cerró.");
+
                 try
                 {
                     var producer = await _producerRepository.GetContactProducer(order.ProducerIdSnapshot)
@@ -568,6 +569,8 @@ namespace Business.Services.Orders
             {
                 await _orderRepository.UpdateOrderAsync(order);
                 await _db.SaveChangesAsync();
+
+                await TryCloseOrderChatAsync(order.Id, "El productor rechazó el pedido. El chat se cerró.");
 
                 var user = await _userRepository.GetContactUser(order.UserId)
                         ?? throw new BusinessException("No se pudo obtener el contacto del usuario.");
@@ -642,6 +645,8 @@ namespace Business.Services.Orders
 
                 if (order.Status == OrderStatus.Completed)
                 {
+                    await TryCloseOrderChatAsync(order.Id, "El pedido se completó. El chat se cerró.");
+
                     var producer = await _producerRepository.GetContactProducer(order.ProducerIdSnapshot)
                                    ?? throw new BusinessException("No se pudo obtener el contacto del productor.");
 
@@ -689,6 +694,8 @@ namespace Business.Services.Orders
                 }
                 else if (order.Status == OrderStatus.Disputed)
                 {
+                    await TryCloseOrderChatAsync(order.Id, "El cliente reportó una novedad con el pedido. El chat se cerró.");
+
                     var producer = await _producerRepository.GetContactProducer(order.ProducerIdSnapshot)
                                    ?? throw new BusinessException("No se pudo obtener el contacto del productor.");
 
@@ -741,6 +748,40 @@ namespace Business.Services.Orders
                 _logger.LogError(ex, "No se pudo registrar el mensaje del chat para la orden {OrderId}.", orderId);
             }
         }
+        private async Task TryEnableOrderChatAsync(int orderId)
+        {
+            if (_orderChatService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _orderChatService.EnableConversationAsync(orderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo habilitar el chat para la orden {OrderId}.", orderId);
+            }
+        }
+
+        private async Task TryCloseOrderChatAsync(int orderId, string message)
+        {
+            if (_orderChatService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _orderChatService.CloseConversationAsync(orderId, message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo cerrar el chat para la orden {OrderId}.", orderId);
+            }
+        }
+
         private static void NormalizeCreateDto(OrderCreateDto dto)
         {
             dto.RecipientName = dto.RecipientName?.Trim() ?? string.Empty;
