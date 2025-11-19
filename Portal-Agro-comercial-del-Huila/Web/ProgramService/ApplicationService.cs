@@ -4,6 +4,7 @@ using Business.Interfaces.Implements.Location;
 using Business.Interfaces.Implements.Notification;
 using Business.Interfaces.Implements.Orders;
 using Business.Interfaces.Implements.Orders.ConsumerRatings;
+using Business.Interfaces.Implements.Orders.OrderChat;
 using Business.Interfaces.Implements.Orders.Reviews;
 using Business.Interfaces.Implements.Producers;
 using Business.Interfaces.Implements.Producers.Analitics;
@@ -19,6 +20,7 @@ using Business.Services.Location;
 using Business.Services.Notifications;
 using Business.Services.Orders;
 using Business.Services.Orders.ConsumerRatings;
+using Business.Services.Orders.OrderChat;
 using Business.Services.Orders.Reviews;
 using Business.Services.Producers;
 using Business.Services.Producers.Analytics;
@@ -33,6 +35,7 @@ using Data.Interfaces.Implements.Location;
 using Data.Interfaces.Implements.Notifications;
 using Data.Interfaces.Implements.Orders;
 using Data.Interfaces.Implements.Orders.ConsumerRatings;
+using Data.Interfaces.Implements.Orders.OrderChat;
 using Data.Interfaces.Implements.Orders.Reviews;
 using Data.Interfaces.Implements.Producers;
 using Data.Interfaces.Implements.Producers.Analytics;
@@ -51,6 +54,7 @@ using Data.Service.Location;
 using Data.Service.Notifications;
 using Data.Service.Orders;
 using Data.Service.Orders.ConsumerRatings;
+using Data.Service.Orders.OrderChat;
 using Data.Service.Orders.Reviews;
 using Data.Service.Producers;
 using Data.Service.Producers.Analytics;
@@ -67,6 +71,7 @@ using Utilities.Messaging.Interfaces;
 using Utilities.QR.Interfaces;
 using Utilities.QR.Services;
 using Web.Hubs.Implements.Notifications;
+using Web.Hubs.Implements.OrderChat;
 using Web.Infrastructures;
 
 namespace Web.ProgramService
@@ -145,6 +150,11 @@ namespace Web.ProgramService
             services.AddScoped<IOrderReadService, OrderReadService>();
 
             services.AddScoped<IOrderEmailService, OrderEmailService>();
+
+            services.AddScoped<IOrderChatConversationRepository, OrderChatConversationRepository>();
+            services.AddScoped<IOrderChatMessageRepository, OrderChatMessageRepository>();
+            services.AddScoped<IOrderChatService, OrderChatService>();
+            services.AddScoped<IOrderChatMessagePusher, SignalROrderChatMessagePusher>();
 
 
             //Producer
