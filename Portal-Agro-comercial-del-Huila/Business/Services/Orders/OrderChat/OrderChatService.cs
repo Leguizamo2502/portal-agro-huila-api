@@ -2,6 +2,7 @@
 using Data.Interfaces.Implements.Orders;
 using Data.Interfaces.Implements.Orders.OrderChat;
 using Data.Interfaces.Implements.Producers;
+using Entity.Domain.Enums;
 using Entity.Domain.Models.Implements.Orders;
 using Entity.Domain.Models.Implements.Orders.ChatOrder;
 using Entity.DTOs.Orders.OrderChat;
@@ -32,6 +33,8 @@ namespace Business.Services.Orders.OrderChat
             _producerRepository = producerRepository;
             _messagePusher = messagePusher;
         }
+
+
 
         public async Task EnsureConversationForOrderAsync(int orderId)
         {
@@ -77,6 +80,45 @@ namespace Business.Services.Orders.OrderChat
             await BroadcastMessageAsync(order.Code, participants, saved);
         }
 
+        public async Task EnableConversationAsync(int orderId)
+        {
+            var conversation = await EnsureConversationAndGetTrackingAsync(orderId);
+            if (conversation.ChatClosedAt.HasValue)
+            {
+                return;
+            }
+
+            if (!conversation.IsChatEnabled)
+            {
+                conversation.IsChatEnabled = true;
+                conversation.ChatEnabledAt ??= DateTime.UtcNow;
+                await _conversationRepository.UpdateAsync(conversation);
+            }
+        }
+
+        public async Task CloseConversationAsync(int orderId, string? systemMessage = null)
+        {
+            var conversation = await EnsureConversationAndGetTrackingAsync(orderId);
+
+            if (conversation.ChatClosedAt.HasValue)
+            {
+                return;
+            }
+
+            conversation.ChatClosedAt = DateTime.UtcNow;
+            conversation.IsChatEnabled = false;
+            conversation.ChatClosedReason = string.IsNullOrWhiteSpace(systemMessage)
+                ? conversation.ChatClosedReason
+                : systemMessage.Trim();
+
+            await _conversationRepository.UpdateAsync(conversation);
+
+            if (!string.IsNullOrWhiteSpace(systemMessage))
+            {
+                await AddSystemMessageAsync(orderId, systemMessage);
+            }
+        }
+
         public async Task EnsureParticipantAsync(int userId, string orderCode)
         {
             var order = await _orderRepository.GetByCode(orderCode)
@@ -113,6 +155,12 @@ namespace Business.Services.Orders.OrderChat
             await EnsureConversationForOrderAsync(order.Id);
             var conversation = await _conversationRepository.GetByOrderIdAsync(order.Id)
                                ?? throw new BusinessException("No se pudo acceder al chat del pedido.");
+            var chatState = ResolveChatAccessState(order, conversation);
+            if (!chatState.CanSendMessages)
+            {
+                throw new BusinessException(chatState.DisabledReason ?? "El chat no está disponible para este pedido.");
+            }
+
 
             var entry = new OrderChatMessage
             {
@@ -147,6 +195,8 @@ namespace Business.Services.Orders.OrderChat
             var conversation = await _conversationRepository.GetByOrderIdAsync(order.Id)
                                ?? throw new BusinessException("No se pudo acceder al chat del pedido.");
 
+            var chatState = ResolveChatAccessState(order, conversation);
+
             var total = await _messageRepository.CountAsync(conversation.Id);
             var messages = await _messageRepository.GetMessagesAsync(conversation.Id, sanitizedSkip, sanitizedTake);
             var dtos = messages.Select(m => MapToDto(m, participants, userId)).ToList();
@@ -158,9 +208,55 @@ namespace Business.Services.Orders.OrderChat
                 ConversationId = conversation.Id,
                 Total = total,
                 HasMore = sanitizedSkip + dtos.Count < total,
+                IsChatEnabled = conversation.IsChatEnabled,
+                IsChatClosed = conversation.ChatClosedAt.HasValue,
+                CanSendMessages = chatState.CanSendMessages,
+                ChatDisabledReason = chatState.DisabledReason,
+                ChatClosedReason = conversation.ChatClosedReason,
+                ChatEnabledAt = conversation.ChatEnabledAt,
+                ChatClosedAt = conversation.ChatClosedAt,
                 Messages = dtos
             };
         }
+
+        private async Task<OrderChatConversation> EnsureConversationAndGetTrackingAsync(int orderId)
+        {
+            await EnsureConversationForOrderAsync(orderId);
+            return await _conversationRepository.GetByOrderIdTrackingAsync(orderId)
+                   ?? throw new BusinessException("La conversación del pedido no existe.");
+        }
+
+        private ChatAccessState ResolveChatAccessState(Order order, OrderChatConversation conversation)
+        {
+            if (conversation.ChatClosedAt.HasValue)
+            {
+                return new ChatAccessState(false,
+                    conversation.ChatClosedReason ?? "El chat está cerrado para este pedido.");
+            }
+
+            if (!conversation.IsChatEnabled)
+            {
+                return new ChatAccessState(false, "El chat se habilitará cuando el productor acepte el pedido.");
+            }
+
+            if (!IsChatAllowedForStatus(order.Status))
+            {
+                return new ChatAccessState(false, "El chat no está disponible en el estado actual del pedido.");
+            }
+
+            return new ChatAccessState(true, null);
+        }
+
+        private static bool IsChatAllowedForStatus(OrderStatus status)
+        {
+            return status is OrderStatus.AcceptedAwaitingPayment
+                or OrderStatus.PaymentSubmitted
+                or OrderStatus.Preparing
+                or OrderStatus.Dispatched
+                or OrderStatus.DeliveredPendingBuyerConfirm;
+        }
+
+        private sealed record ChatAccessState(bool CanSendMessages, string? DisabledReason);
 
         private async Task<OrderParticipants> GetParticipantsAsync(Order order)
         {
