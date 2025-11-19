@@ -175,6 +175,7 @@ namespace Business.Services.Orders
                     throw;
                 }
             });
+            await TryEnableOrderChatAsync(order.Id);
 
             var user = await _userRepository.GetContactUser(order.UserId)
                       ?? throw new BusinessException("No se pudo obtener el contacto del usuario.");
