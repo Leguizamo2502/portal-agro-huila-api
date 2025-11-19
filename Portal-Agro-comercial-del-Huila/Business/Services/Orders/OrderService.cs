@@ -1,5 +1,6 @@
 ﻿using Business.Interfaces.Implements.Notification;
 using Business.Interfaces.Implements.Orders;
+using Business.Interfaces.Implements.Orders.OrderChat;
 using Business.Interfaces.Implements.Producers.Cloudinary;
 using Data.Interfaces.Implements.Auth;
 using Data.Interfaces.Implements.Orders;
@@ -38,6 +39,7 @@ namespace Business.Services.Orders
         private readonly int _paymentUploadDeadlineHours;
         private readonly int _deliveredConfirmDeadlineHours;
         private readonly INotificationService _notifications;
+        private readonly IOrderChatService _orderChatService;
 
         public OrderService(
             IMapper mapper,
@@ -50,6 +52,7 @@ namespace Business.Services.Orders
             IOrderEmailService orderEmailService,
             IUserRepository userRepository,
             IProducerRepository producerRepository,
+            IOrderChatService orderChatService,
             IConfiguration cfg)
         {
             _mapper = mapper;
@@ -60,6 +63,7 @@ namespace Business.Services.Orders
             _productRepository = productRepository;
             _orderEmailService = orderEmailService;
             _userRepository = userRepository;
+            _producerRepository = producerRepository;
             _db = db;
             _producerRepository = producerRepository;
 
@@ -88,6 +92,13 @@ namespace Business.Services.Orders
             await _orderRepository.AddAsync(order);
             await _db.SaveChangesAsync();
 
+            await _orderChatService.EnsureConversationForOrderAsync(order.Id);
+            //chat
+            //await _orderChatService.AddSystemMessageAsync(order.Id, "Se creó el pedido. Puedes comunicarte con el productor por este medio.");
+            await TryAddOrderChatSystemMessageAsync(
+               order.Id,
+               "Se creó el pedido. Puedes comunicarte con el productor por este medio.",
+               ensureConversation: true);
             await SendOrderCreatedEmailsSafelyAsync(order);
 
             // FIX: Notificar al productor usando su UserId (no ProducerId)
@@ -187,6 +198,9 @@ namespace Business.Services.Orders
                 RelatedType = "Order",
                 RelatedRoute = $"/account/orders/{order.Code}"
             });
+            //chat
+            //await _orderChatService.AddSystemMessageAsync(order.Id, "El productor aceptó el pedido. Continúa la conversación por este medio.");
+            await TryAddOrderChatSystemMessageAsync(order.Id, "El productor aceptó el pedido. Continúa la conversación por este medio.");
         }
 
         public async Task UploadPaymentAsync(int userId, string code, OrderUploadPaymentDto dto)
@@ -706,7 +720,27 @@ namespace Business.Services.Orders
         }
 
         // ============== Helpers privados ==============
+        private async Task TryAddOrderChatSystemMessageAsync(int orderId, string message, bool ensureConversation = false)
+        {
+            if (_orderChatService == null)
+            {
+                return;
+            }
 
+            try
+            {
+                if (ensureConversation)
+                {
+                    await _orderChatService.EnsureConversationForOrderAsync(orderId);
+                }
+
+                await _orderChatService.AddSystemMessageAsync(orderId, message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo registrar el mensaje del chat para la orden {OrderId}.", orderId);
+            }
+        }
         private static void NormalizeCreateDto(OrderCreateDto dto)
         {
             dto.RecipientName = dto.RecipientName?.Trim() ?? string.Empty;
