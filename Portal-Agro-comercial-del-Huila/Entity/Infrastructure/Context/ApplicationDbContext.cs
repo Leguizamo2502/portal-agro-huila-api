@@ -170,6 +170,8 @@ namespace Entity.Infrastructure.Context
                     .WithOne()
                     .HasForeignKey<OrderChatConversation>(x => x.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
+                b.Property(x => x.IsChatEnabled).HasDefaultValue(false);
+                b.Property(x => x.ChatClosedReason).HasMaxLength(500);
             });
 
             modelBuilder.Entity<OrderChatMessage>(b =>
