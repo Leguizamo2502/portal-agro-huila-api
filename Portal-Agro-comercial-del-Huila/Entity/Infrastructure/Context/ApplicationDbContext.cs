@@ -1,14 +1,15 @@
-﻿using System.Reflection;
-using Entity.Domain.Models.Implements.Auth;
+﻿using Entity.Domain.Models.Implements.Auth;
 using Entity.Domain.Models.Implements.Auth.Token;
 using Entity.Domain.Models.Implements.Favorites;
 using Entity.Domain.Models.Implements.Notifications;
 using Entity.Domain.Models.Implements.Orders;
+using Entity.Domain.Models.Implements.Orders.ChatOrder;
 using Entity.Domain.Models.Implements.Producers;
 using Entity.Domain.Models.Implements.Producers.Farms;
 using Entity.Domain.Models.Implements.Producers.Products;
 using Entity.Domain.Models.Implements.Security;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace Entity.Infrastructure.Context
 {
@@ -162,6 +163,25 @@ namespace Entity.Infrastructure.Context
                  .HasForeignKey(o => o.CityId)
                  .OnDelete(DeleteBehavior.Restrict); // opcional pero recomendable
             });
+            modelBuilder.Entity<OrderChatConversation>(b =>
+            {
+                b.HasIndex(x => x.OrderId).IsUnique();
+                b.HasOne(x => x.Order)
+                    .WithOne()
+                    .HasForeignKey<OrderChatConversation>(x => x.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.Property(x => x.IsChatEnabled).HasDefaultValue(false);
+                b.Property(x => x.ChatClosedReason).HasMaxLength(500);
+            });
+
+            modelBuilder.Entity<OrderChatMessage>(b =>
+            {
+                b.Property(x => x.Message).HasMaxLength(2000);
+                b.HasOne(x => x.Conversation)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(x => x.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
         }
 
@@ -202,6 +222,8 @@ namespace Entity.Infrastructure.Context
         //Order
         public DbSet<Order> Orders { get; set; }
         public DbSet<ConsumerRating> ConsumerRatings { get; set; }
+        public DbSet<OrderChatConversation> OrderChatConversations { get; set; }
+        public DbSet<OrderChatMessage> OrderChatMessages { get; set; }
 
         //Notifications
         public DbSet<Notification> Notifications { get; set; }
