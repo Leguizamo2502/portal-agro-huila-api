@@ -1,9 +1,11 @@
-﻿using Business.Interfaces.Implements.Orders.ConsumerRatings;
+﻿using Business.Interfaces.Implements.Notification;
+using Business.Interfaces.Implements.Orders.ConsumerRatings;
 using Data.Interfaces.Implements.Orders;
 using Data.Interfaces.Implements.Orders.ConsumerRatings;
 using Data.Interfaces.Implements.Producers;
 using Entity.Domain.Enums;
 using Entity.Domain.Models.Implements.Orders;
+using Entity.DTOs.Notifications;
 using Entity.DTOs.Order.ConsumerRatings;
 using Entity.DTOs.Order.ConsumerRatings.Create;
 using Entity.DTOs.Order.ConsumerRatings.Select;
@@ -19,6 +21,7 @@ namespace Business.Services.Orders.ConsumerRatings
         private readonly IConsumerRatingRepository _ratingRepository;
         private readonly IProducerRepository _producerRepository;
         private readonly IOrderRepository _orderRepository;
+        private readonly INotificationService _notificationService;
         private readonly IMapper _mapper;
         private readonly ILogger<ConsumerRatingService> _logger;
 
@@ -26,12 +29,14 @@ namespace Business.Services.Orders.ConsumerRatings
             IConsumerRatingRepository ratingRepository,
             IProducerRepository producerRepository,
             IOrderRepository orderRepository,
+            INotificationService notificationService,
             IMapper mapper,
             ILogger<ConsumerRatingService> logger)
         {
             _ratingRepository = ratingRepository;
             _producerRepository = producerRepository;
             _orderRepository = orderRepository;
+            _notificationService = notificationService;
             _mapper = mapper;
             _logger = logger;
         }
@@ -82,6 +87,14 @@ namespace Business.Services.Orders.ConsumerRatings
                 var created = await _ratingRepository.AddAsync(entity);
                 var reloaded = await _ratingRepository.GetByIdAsync(created.Id)
                     ?? throw new BusinessException("No se pudo cargar la calificación creada.");
+                await _notificationService.CreateAsync(new CreateNotificationRequest
+                {
+                    UserId = order.UserId,
+                    Title = "Has recibido una calificación",
+                    Message = $"El productor ha calificado tu compra con {dto.Rating} estrella(s).",
+                    RelatedType = "Order",
+                    RelatedRoute = $"/account/orders/{order.Code}"
+                });
 
                 return _mapper.Map<ConsumerRatingSelectDto>(reloaded);
             }
