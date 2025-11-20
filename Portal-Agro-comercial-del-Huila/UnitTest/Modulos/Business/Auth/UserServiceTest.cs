@@ -18,7 +18,7 @@ namespace UnitTest.Modulos.Business.Auth
         private readonly Mock<IRolUserRepository> _rolUserRepositoryMock;
         private readonly UserService _service;
 
-        public UserServiceTests()
+        public UserServiceTest()
         {
             _dataMock = new Mock<IDataGeneric<User>>();
             _mapperMock = new Mock<IMapper>();
