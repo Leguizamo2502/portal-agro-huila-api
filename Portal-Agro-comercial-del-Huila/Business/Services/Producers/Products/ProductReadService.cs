@@ -1,4 +1,5 @@
 ﻿// Business/Services/Producers/Products/ProductReadService.cs
+using Business.Constants;
 using Business.Interfaces.Implements.Producers.Products;
 using Data.Interfaces.Implements.Favorites;
 using Data.Interfaces.Implements.Producers;
@@ -140,6 +141,24 @@ public class ProductReadService : IProductReadService
             throw new BusinessException("Error al obtener los productos del productor.", ex);
         }
     }
+
+    public async Task<IEnumerable<ProductSelectDto>> GetLowStockByProducerAsync(int userId)
+    {
+        try
+        {
+            var producerId = await _producerRepo.GetIdProducer(userId)
+                ?? throw new BusinessException("El usuario no está registrado como productor.");
+
+            var entities = await _productRepo.GetLowStockByProducerAsync(producerId, ProductStockConstants.LowStockThreshold);
+            return _mapper.Map<IEnumerable<ProductSelectDto>>(entities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener productos con poco stock para el usuario {UserId}", userId);
+            throw new BusinessException("Error al obtener los productos con poco stock.", ex);
+        }
+    }
+
 
     public async Task<IEnumerable<ProductSelectDto>> GetByProducerCodeAsync(string codeProducer)
     {

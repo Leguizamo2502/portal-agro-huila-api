@@ -29,11 +29,17 @@ namespace Data.Service.Producers.Products
                         .ThenInclude(f => f.City)
                             .ThenInclude(c => c.Department)
                 .Include(p => p.ProductFarms)
-                    .ThenInclude(pf => pf.Farm)
-                        .ThenInclude(f => f.Producer)
-                            .ThenInclude(prod => prod.User)
-                                .ThenInclude(u => u.Person)
+                .ThenInclude(pf => pf.Farm)
+                    .ThenInclude(f => f.Producer)
+                        .ThenInclude(prod => prod.User)
+                            .ThenInclude(u => u.Person)
                 .AsSplitQuery(); // evita explosión cartesiana por múltiples Includes
+        }
+
+        private IQueryable<Product> AvailableProductsQuery()
+        {
+            return BaseQuery()
+                .Where(p => p.Stock > 0);
         }
 
         public async Task<IEnumerable<Product>> GetByIdsFavoritesAsync(IEnumerable<int> ids)
@@ -42,7 +48,7 @@ namespace Data.Service.Producers.Products
             if (idsList.Count == 0)
                 return new List<Product>();
 
-            return await BaseQuery()
+            return await AvailableProductsQuery()
                 .Where(p => idsList.Contains(p.Id))
                 .OrderByDescending(p => p.CreateAt)
                 .ThenByDescending(p => p.Id)
@@ -88,7 +94,7 @@ namespace Data.Service.Producers.Products
 
         public override async Task<IEnumerable<Product>> GetAllAsync()
         {
-            return await BaseQuery()
+            return await AvailableProductsQuery()
                 .OrderByDescending(p => p.CreateAt)
                 .ThenByDescending(p => p.Id)
                 .ToListAsync();
@@ -98,13 +104,13 @@ namespace Data.Service.Producers.Products
         {
             if (limit.HasValue && limit.Value > 0)
             {
-                return await BaseQuery()
+                return await AvailableProductsQuery()
                     .OrderByDescending(p => p.CreateAt)
                     .ThenByDescending(p => p.Id)
                     .Take(limit.Value)
                     .ToListAsync();
             }
-            return await BaseQuery()
+            return await AvailableProductsQuery()
                 .OrderByDescending(p => p.CreateAt)
                 .ThenByDescending(p => p.Id)
                 .ToListAsync();
@@ -135,6 +141,15 @@ namespace Data.Service.Producers.Products
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Product>> GetLowStockByProducerAsync(int producerId, int threshold)
+        {
+            return await BaseQuery()
+                .Where(p => p.ProducerId == producerId && p.Stock <= threshold)
+                .OrderBy(p => p.Stock)
+                .ThenByDescending(p => p.CreateAt)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId)
         {
             if (categoryId <= 0) return Enumerable.Empty<Product>();
@@ -154,7 +169,7 @@ namespace Data.Service.Producers.Products
             if (includeDescendants)
                 filterIds = await GetAllDescendantCategoryIdsAsync(ids);
 
-            return await BaseQuery()                          // ⬅️ se usa tu BaseQuery()
+            return await AvailableProductsQuery()
                 .Where(p => filterIds.Contains(p.CategoryId))
                 .OrderBy(p => p.Name)
                 .ThenBy(p => p.Id)
@@ -188,7 +203,7 @@ namespace Data.Service.Producers.Products
 
         public async Task<IEnumerable<Product>> GetByProducerCode(string producerCode)
         {
-            return await BaseQuery()
+            return await AvailableProductsQuery()
                 .OrderByDescending(p => p.CreateAt)
                 .ThenByDescending(p => p.Id)
                 .Where(p => !p.IsDeleted && p.Producer.Code == producerCode)
@@ -199,7 +214,7 @@ namespace Data.Service.Producers.Products
         {
             if (limit <= 0) limit = 10;
 
-            return await BaseQuery()
+            return await AvailableProductsQuery()
                 // 1) Prioriza los que tengan al menos 1 completado (true > false)
                 .OrderByDescending(p => p.Orders.Any(o => !o.IsDeleted && o.Status == OrderStatus.Completed))
                 // 2) Dentro de ellos, más completados primero

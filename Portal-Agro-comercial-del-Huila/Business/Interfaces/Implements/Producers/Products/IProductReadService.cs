@@ -8,6 +8,7 @@ namespace Business.Interfaces.Implements.Producers.Products
         Task<ProductSelectDto?> GetByIdAsync(int id);
         Task<IEnumerable<ProductSelectDto>> GetFavoritesForUserAsync(int userId);
         Task<IEnumerable<ProductSelectDto>> GetByProducerAsync(int userId);
+        Task<IEnumerable<ProductSelectDto>> GetLowStockByProducerAsync(int userId);
         Task<IEnumerable<ProductSelectDto>> GetAllHomeAsync(int? limit);
 
         Task<IEnumerable<ProductSelectDto>> GetByProducerCodeAsync(string codeProducer);

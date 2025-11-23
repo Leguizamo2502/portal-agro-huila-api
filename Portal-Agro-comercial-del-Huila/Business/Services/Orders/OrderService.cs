@@ -2,6 +2,7 @@
 using Business.Interfaces.Implements.Orders;
 using Business.Interfaces.Implements.Orders.OrderChat;
 using Business.Interfaces.Implements.Producers.Cloudinary;
+using Business.Interfaces.Implements.Producers.Products;
 using Data.Interfaces.Implements.Auth;
 using Data.Interfaces.Implements.Orders;
 using Data.Interfaces.Implements.Producers;
@@ -40,6 +41,7 @@ namespace Business.Services.Orders
         private readonly int _deliveredConfirmDeadlineHours;
         private readonly INotificationService _notifications;
         private readonly IOrderChatService _orderChatService;
+        private readonly ILowStockNotifier _lowStockNotifier;
 
         public OrderService(
             IMapper mapper,
@@ -53,6 +55,7 @@ namespace Business.Services.Orders
             IUserRepository userRepository,
             IProducerRepository producerRepository,
             IOrderChatService orderChatService,
+            ILowStockNotifier lowStockNotifier,
             IConfiguration cfg)
         {
             _mapper = mapper;
@@ -65,6 +68,7 @@ namespace Business.Services.Orders
             _userRepository = userRepository;
             _producerRepository = producerRepository;
             _orderChatService = orderChatService;
+            _lowStockNotifier = lowStockNotifier;
             _db = db;
             _producerRepository = producerRepository;
 
@@ -175,6 +179,11 @@ namespace Business.Services.Orders
                     throw;
                 }
             });
+
+            var product = await _productRepository.GetByIdSmall(order.ProductId);
+            if (product != null)
+                await _lowStockNotifier.NotifyIfLowAsync(product.Id, product.Stock);
+
             await TryEnableOrderChatAsync(order.Id);
 
             var user = await _userRepository.GetContactUser(order.UserId)
