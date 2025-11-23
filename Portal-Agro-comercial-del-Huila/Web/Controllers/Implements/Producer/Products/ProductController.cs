@@ -300,6 +300,26 @@ namespace Web.Controllers.Implements.Producer.Products
 
         }
 
+        [HttpGet("by-producer/low-stock")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public virtual async Task<IActionResult> GetLowStockByProducer()
+        {
+            var userId = HttpContext.GetUserId();
+            try
+            {
+                var result = await _productReadService.GetLowStockByProducerAsync(userId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo productos con poco stock");
+                return StatusCode(500, new { message = "Error interno del servidor." });
+            }
+
+        }
+
+
         [HttpGet("featured")]
         [ProducesResponseType(200)]
         [ProducesResponseType(500)]
