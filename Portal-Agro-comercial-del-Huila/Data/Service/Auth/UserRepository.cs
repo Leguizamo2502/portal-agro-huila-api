@@ -30,9 +30,11 @@ namespace Data.Service.Auth
             var user = await _dbSet
                 .FirstOrDefaultAsync(u =>
                             u.Email == loginDto.Email &&
-                            u.Password == loginDto.Password);
+                            u.Password == loginDto.Password &&
+                            !u.IsDeleted &&
+                            u.IsEmailVerified);
 
-            suceeded = user != null ? true : throw new UnauthorizedAccessException("Credenciales inválidas");
+            suceeded = user != null ? true : throw new UnauthorizedAccessException("Credenciales inválidas o correo no verificado");
 
             return user;
         }
@@ -46,7 +48,7 @@ namespace Data.Service.Auth
 
         public async Task<bool> ExistsByDocumentAsync(string identification)
         {
-            return await _dbSet.AnyAsync(u=>u.Person.Identification == identification);
+            return await _dbSet.AnyAsync(u => u.Person.Identification == identification && u.IsDeleted == false);
         }
 
         public async Task<User?> GetByEmailAsync(string email)
@@ -55,6 +57,14 @@ namespace Data.Service.Auth
                 .Include(u => u.Person)
                 .Include(u => u.RolUsers).ThenInclude(ru => ru.Rol)
                 .FirstOrDefaultAsync(u => u.Email == email && u.IsDeleted == false);
+        }
+
+        public async Task<User?> GetByDocumentAsync(string identification)
+        {
+            return await _dbSet
+                .Include(u => u.Person)
+                .Include(u => u.RolUsers).ThenInclude(ru => ru.Rol)
+                .FirstOrDefaultAsync(u => u.Person.Identification == identification && u.IsDeleted == false);
         }
 
         public async Task<User?> GetDataBasic(int userId)
