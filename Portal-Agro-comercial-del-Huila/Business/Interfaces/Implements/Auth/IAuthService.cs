@@ -8,7 +8,8 @@ namespace Business.Interfaces.Implements.Auth
         Task<UserDto> RegisterAsync(RegisterUserDto dto);
         Task RequestPasswordResetAsync(string email);
         Task ResetPasswordAsync(ConfirmResetDto dto);
-
+        Task RequestEmailVerificationAsync(string email);
+        Task ConfirmEmailVerificationAsync(ConfirmEmailVerificationDto dto);
         Task<IEnumerable<string>> GetRolesUserAsync(int idUser);
         Task<UserSelectDto?> GetDataBasic(int userId);
 
