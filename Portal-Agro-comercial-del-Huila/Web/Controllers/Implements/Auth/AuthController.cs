@@ -96,7 +96,7 @@ namespace Web.Controllers.Implements.Auth
             catch (UnauthorizedAccessException)
             {
                 // Mensaje controlado y status 401
-                return Unauthorized(new { isSuccess = false, message = "Credenciales inválidas" });
+                return Unauthorized(new { isSuccess = false, message = "Credenciales inválidas o correo no verificado" });
             }
         }
 
@@ -357,7 +357,61 @@ namespace Web.Controllers.Implements.Auth
             }
         }
 
+        [HttpPost("verify/send-code")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> EnviarCodigoVerificacion([FromBody] RequestEmailVerificationDto dto)
+        {
+            try
+            {
+                await _authService.RequestEmailVerificationAsync(dto.Email);
+                return Ok(new { isSuccess = true, message = "Código de verificación enviado" });
+            }
+            catch (ValidationException ex)
+            {
+                _logger.LogWarning(ex, "Validación fallida en solicitud de verificación");
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ExternalServiceException ex)
+            {
+                _logger.LogError(ex, "Fallo al enviar el correo de verificación");
+                return StatusCode(500, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al enviar código de verificación");
+                return StatusCode(500, new { message = "Error interno del servidor" });
+            }
+        }
 
+        [HttpPost("verify/confirm")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> ConfirmarCorreo([FromBody] ConfirmEmailVerificationDto dto)
+        {
+            try
+            {
+                await _authService.ConfirmEmailVerificationAsync(dto);
+                return Ok(new { isSuccess = true, message = "Correo verificado" });
+            }
+            catch (ValidationException ex)
+            {
+                _logger.LogWarning(ex, "Validación fallida al confirmar verificación de correo");
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ExternalServiceException ex)
+            {
+                _logger.LogError(ex, "Fallo al confirmar verificación de correo");
+                return StatusCode(500, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al confirmar verificación de correo");
+                return StatusCode(500, new { message = "Error interno del servidor" });
+            }
+        }
 
 
 
