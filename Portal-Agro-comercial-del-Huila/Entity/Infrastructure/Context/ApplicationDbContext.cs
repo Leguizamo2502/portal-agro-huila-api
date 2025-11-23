@@ -191,6 +191,7 @@ namespace Entity.Infrastructure.Context
         public DbSet<Person> Persons { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetCode> PasswordResetCodes { get; set; }
+        public DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
 
         //Security
         public DbSet<Rol> Rols { get; set; }

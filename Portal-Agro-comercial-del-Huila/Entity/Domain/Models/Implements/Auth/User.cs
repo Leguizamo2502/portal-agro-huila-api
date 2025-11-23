@@ -25,7 +25,7 @@ namespace Entity.Domain.Models.Implements.Auth
         public ICollection<Notification> Notifications { get; set; } = [];
         public ICollection<ConsumerRating> ConsumerRatingsReceived { get; set; } = [];
 
-
+        public bool IsEmailVerified { get; set; }
 
     }
 }
