@@ -11,7 +11,7 @@ namespace Data.Service.Notifications
         public NotificationRepository(ApplicationDbContext context) : base(context)
         {
         }
-        public async Task<IReadOnlyList<Notification>> GetUnreadAsync(int userId, int take = 20, CancellationToken ct = default)
+        public async Task<IEnumerable<Notification>> GetUnreadAsync(int userId, int take = 20, CancellationToken ct = default)
         {
             return await _dbSet
                 .AsNoTracking()
@@ -29,7 +29,7 @@ namespace Data.Service.Notifications
                 .CountAsync(ct);
         }
 
-        public async Task<(IReadOnlyList<Notification> Items, int Total)> GetHistoryAsync(
+        public async Task<(IEnumerable<Notification> Items, int Total)> GetHistoryAsync(
             int userId, int page, int pageSize, CancellationToken ct = default)
         {
             if (page <= 0) page = 1;
