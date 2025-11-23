@@ -169,6 +169,8 @@ namespace Web.ProgramService
             //Producer
             services.AddScoped<IProducerRepository, ProducerRepository>();
 
+            services.AddScoped<ILowStockNotifier, LowStockNotifier>();
+
             services.AddScoped<IFarmRepository, FarmRepository>();
             services.AddScoped<IFarmService, FarmService>();
 
