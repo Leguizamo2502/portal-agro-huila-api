@@ -27,6 +27,7 @@ namespace UnitTest.Modulos.Business.Auth
         private readonly Mock<ISendCode> _emailServiceMock;
         private readonly Mock<IPasswordResetCodeRepository> _passwordResetRepositoryMock;
         private readonly Mock<IPersonRepository> _personRepositoryMock;
+        private readonly Mock<IEmailVerificationCodeRepository> _emailVerificationRepositoryMock;
         private readonly AuthService _service;
 
         public AuthServiceTest()
@@ -37,6 +38,7 @@ namespace UnitTest.Modulos.Business.Auth
             _mapperMock = new Mock<IMapper>();
             _emailServiceMock = new Mock<ISendCode>();
             _passwordResetRepositoryMock = new Mock<IPasswordResetCodeRepository>();
+            _emailVerificationRepositoryMock = new Mock<IEmailVerificationCodeRepository>();
             _personRepositoryMock = new Mock<IPersonRepository>();
 
             _service = new AuthService(
@@ -46,7 +48,8 @@ namespace UnitTest.Modulos.Business.Auth
                 _mapperMock.Object,
                 _emailServiceMock.Object,
                 _passwordResetRepositoryMock.Object,
-                _personRepositoryMock.Object);
+                _personRepositoryMock.Object,
+                _emailVerificationRepositoryMock.Object);
         }
 
         [Fact]
@@ -214,6 +217,7 @@ namespace UnitTest.Modulos.Business.Auth
             var newUser = new User { Password = dto.Password };
             var createdUser = new User { Id = 42, Email = dto.Email, Person = person };
             var expectedDto = new UserDto { Id = 42, Email = dto.Email };
+            EmailVerificationCode? persistedVerification = null;
 
             _userRepositoryMock.Setup(r => r.ExistsByEmailAsync(dto.Email)).ReturnsAsync(false);
             _userRepositoryMock.Setup(r => r.ExistsByDocumentAsync(dto.Identification)).ReturnsAsync(false);
@@ -227,15 +231,24 @@ namespace UnitTest.Modulos.Business.Auth
             _rolUserRepositoryMock.Setup(r => r.AsignateRolDefault(It.IsAny<User>())).ReturnsAsync(new RolUser());
             _userRepositoryMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(createdUser);
             _mapperMock.Setup(m => m.Map<UserDto>(createdUser)).Returns(expectedDto);
+            _emailVerificationRepositoryMock
+                .Setup(r => r.AddAsync(It.IsAny<EmailVerificationCode>()))
+                .ReturnsAsync((EmailVerificationCode v) =>
+                {
+                    persistedVerification = v;
+                    return v;
+                });
 
             var result = await _service.RegisterAsync(dto);
 
             var expectedHash = EncriptePassword.EncripteSHA256(dto.Password);
             _userRepositoryMock.Verify(r => r.AddAsync(It.Is<User>(u => u.Person == person && u.Password == expectedHash)), Times.Once);
             _rolUserRepositoryMock.Verify(r => r.AsignateRolDefault(It.Is<User>(u => u.Id == 42)), Times.Once);
+            Assert.NotNull(persistedVerification);
+            Assert.Equal(createdUser.Id, persistedVerification!.UserId);
+            _emailServiceMock.Verify(e => e.SendVerificationCodeEmail(dto.Email, persistedVerification.Code), Times.Once);
             Assert.Equal(expectedDto, result);
         }
-
         [Fact]
         public async Task RegisterAsync_ShouldThrowBusinessException_WhenEmailExists()
         {

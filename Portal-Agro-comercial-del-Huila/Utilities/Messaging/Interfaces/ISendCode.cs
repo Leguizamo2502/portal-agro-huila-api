@@ -9,5 +9,6 @@ namespace Utilities.Messaging.Interfaces
     public interface ISendCode
     {
         Task SendRecoveryCodeEmail(string emailReceptor, string recoveryCode);
+        Task SendVerificationCodeEmail(string emailReceptor, string verificationCode);
     }
 }
