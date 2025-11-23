@@ -33,12 +33,14 @@ namespace Business.Services.Producers.Products
         private readonly ILogger<ProductService> _logger;
         private readonly IProducerRepository _producerRepository;
         private readonly IFavoriteRepository _favoriteRepository;
+        private readonly ILowStockNotifier _lowStockNotifier;
 
         private const int MaxImages = 5;
 
         public ProductService(IDataGeneric<Product> data, IMapper mapper, IProductRepository productRepository, 
             ICloudinaryService cloudinaryService, IProductImageRepository productImageRepository,ApplicationDbContext context, 
-            ILogger<ProductService> logger,IProducerRepository producerRepository,IFavoriteRepository favoriteRepository) : base(data, mapper)
+            ILogger<ProductService> logger,IProducerRepository producerRepository,IFavoriteRepository favoriteRepository,
+            ILowStockNotifier lowStockNotifier) : base(data, mapper)
         {
             _productRepository = productRepository;
             _cloudinaryService = cloudinaryService;
@@ -47,6 +49,7 @@ namespace Business.Services.Producers.Products
             _logger = logger;
             _producerRepository = producerRepository;
             _favoriteRepository = favoriteRepository;
+            _lowStockNotifier = lowStockNotifier;
         }
 
 
@@ -300,17 +303,12 @@ namespace Business.Services.Producers.Products
             List<ProductImage> newImages = new();
             try
             {
-                //if (imagesToDelete.Count > 0)
-                //{
-                //    // Si DeleteImagesAsync toca nube, que lo haga aquí (fuera del strategy/tx)
-                //    await DeleteImagesAsync(imagesToDelete);
-                //}
+                
 
                 if (filesToUpload.Count > 0)
                 {
                     // Validar cupo antes de subir
                     var currentCount = (await _productImageRepository.GetByProductIdAsync(dto.Id)).Count;
-                    //ValidateMaxImages(filesToUpload.Count + currentCount, currentCount);
 
                     // Subida a nube + creación de entidades en memoria
                     newImages = await UploadAndMapImagesAsync(filesToUpload, product.Id);
@@ -378,6 +376,7 @@ namespace Business.Services.Producers.Products
 
                 if (!updated)
                     throw new BusinessException($"No se encontró el producto {dto.ProductId} o no se pudo actualizar el stock.");
+                await _lowStockNotifier.NotifyIfLowAsync(dto.ProductId, dto.NewStock);
 
                 return true;
             }
