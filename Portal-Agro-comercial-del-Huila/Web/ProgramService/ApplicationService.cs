@@ -98,6 +98,8 @@ namespace Web.ProgramService
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IAuthCookieFactory, AuthCookieFactory>();
 
+            services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
+
            
 
             //Cloudinary
@@ -166,6 +168,8 @@ namespace Web.ProgramService
 
             //Producer
             services.AddScoped<IProducerRepository, ProducerRepository>();
+
+            services.AddScoped<ILowStockNotifier, LowStockNotifier>();
 
             services.AddScoped<IFarmRepository, FarmRepository>();
             services.AddScoped<IFarmService, FarmService>();

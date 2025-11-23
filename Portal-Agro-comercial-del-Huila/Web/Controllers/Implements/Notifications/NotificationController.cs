@@ -24,7 +24,7 @@ namespace Web.Controllers.Implements.Notifications
 
         // GET api/notification/unread?take=20
         [HttpGet("unread")]
-        public async Task<ActionResult<IReadOnlyList<NotificationListItemDto>>> GetUnread([FromQuery] int take = 20, CancellationToken ct = default)
+        public async Task<IActionResult> GetUnread([FromQuery] int take = 20, CancellationToken ct = default)
         {
             var userId = GetUserIdOrThrow();
             if (take <= 0) take = 20;
@@ -44,7 +44,7 @@ namespace Web.Controllers.Implements.Notifications
 
         // GET api/notification/history?page=1&pageSize=20
         [HttpGet("history")]
-        public async Task<ActionResult<(IReadOnlyList<NotificationListItemDto> Items, int Total)>> History(
+        public async Task<IActionResult> History(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             CancellationToken ct = default)
@@ -54,7 +54,7 @@ namespace Web.Controllers.Implements.Notifications
             if (pageSize <= 0) pageSize = 20;
 
             var result = await _service.GetHistoryAsync(userId, page, pageSize, ct);
-            return Ok(result);
+            return Ok(result.Items);
         }
 
         // PUT api/notification/{id}/read
@@ -70,7 +70,7 @@ namespace Web.Controllers.Implements.Notifications
         // OPCIONAL (solo para pruebas manuales con Postman)
         // POST api/notification
         [HttpPost]
-        public async Task<ActionResult<int>> Create([FromBody] CreateNotificationRequest request, CancellationToken ct = default)
+        public async Task<IActionResult> Create([FromBody] CreateNotificationRequest request, CancellationToken ct = default)
         {
             // Si no envías UserId en el body, se asume el del token
             if (request.UserId <= 0)

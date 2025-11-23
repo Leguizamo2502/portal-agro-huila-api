@@ -21,7 +21,7 @@ namespace Entity.Infrastructure.DataInit.Auth
                     Active = true,
                     IsDeleted = false,
                     CreateAt = initialDate,
-
+                    IsEmailVerified = true
                 },
                 new User
                 {
@@ -31,7 +31,8 @@ namespace Entity.Infrastructure.DataInit.Auth
                     PersonId = 2,
                     Active = true,
                     IsDeleted = false,
-                    CreateAt = initialDate
+                    CreateAt = initialDate,
+                    IsEmailVerified = true
                 },
                 new User
                 {
@@ -41,7 +42,8 @@ namespace Entity.Infrastructure.DataInit.Auth
                     PersonId = 3,
                     Active = true,
                     IsDeleted = false,
-                    CreateAt = initialDate
+                    CreateAt = initialDate,
+                    IsEmailVerified = true
                 },
 
                 new User
@@ -52,7 +54,8 @@ namespace Entity.Infrastructure.DataInit.Auth
                     PersonId = 4,
                     Active = true,
                     IsDeleted = false,
-                    CreateAt = initialDate
+                    CreateAt = initialDate,
+                    IsEmailVerified = true
                 },
 
                 new User
@@ -63,7 +66,8 @@ namespace Entity.Infrastructure.DataInit.Auth
                     PersonId = 5,
                     Active = true,
                     IsDeleted = false,
-                    CreateAt = initialDate
+                    CreateAt = initialDate,
+                    IsEmailVerified = true
                 }
 
             );

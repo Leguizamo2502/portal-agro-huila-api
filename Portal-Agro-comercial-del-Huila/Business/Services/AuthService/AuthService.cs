@@ -21,9 +21,11 @@ namespace Business.Services.AuthService
         private readonly ISendCode _emailService;
         private readonly IPasswordResetCodeRepository _passwordResetRepo;
         private readonly IPersonRepository _personRepository;
+        private readonly IEmailVerificationCodeRepository _emailVerificationRepo;
 
         public AuthService(IUserRepository userData,ILogger<AuthService> logger, IRolUserRepository rolUserData, IMapper mapper,
-            ISendCode emailService, IPasswordResetCodeRepository passwordResetRepo,IPersonRepository personRepository)
+            ISendCode emailService, IPasswordResetCodeRepository passwordResetRepo,IPersonRepository personRepository,
+            IEmailVerificationCodeRepository emailVerificationCodeRepository)
         {
             _logger = logger;
             _userData = userData;
@@ -32,6 +34,7 @@ namespace Business.Services.AuthService
             _personRepository = personRepository;
             _emailService = emailService;
             _passwordResetRepo = passwordResetRepo;
+            _emailVerificationRepo = emailVerificationCodeRepository;
         }
 
         public async Task ChangePasswordAsync(ChangePasswordDto dto, int userId)
@@ -112,11 +115,19 @@ namespace Business.Services.AuthService
         {
             try
             {
-                if (await _userData.ExistsByEmailAsync(dto.Email))
-                    throw new Exception("Correo ya registrado");
+                var existingByEmail = await _userData.GetByEmailAsync(dto.Email);
+                var existingByDocument = await _userData.GetByDocumentAsync(dto.Identification);
 
-                if (await _userData.ExistsByDocumentAsync(dto.Identification))
+                var existingVerified = existingByEmail?.IsEmailVerified == true
+                    || existingByDocument?.IsEmailVerified == true;
+
+                if (existingVerified)
+                {
+                    if (existingByEmail?.IsEmailVerified == true)
+                        throw new Exception("Correo ya registrado");
+
                     throw new Exception("Ya existe una persona con este numero de identificacion");
+                }
 
                 var validPassword = BusinessValidationHelper.IsValidPassword(dto.Password);
                 if (!validPassword)
@@ -129,8 +140,33 @@ namespace Business.Services.AuthService
 
                 user.Password = EncriptePassword.EncripteSHA256(user.Password);
 
+                var existingUser = existingByDocument ?? existingByEmail;
+
+                if (existingUser != null)
+                {
+                    existingUser.Email = dto.Email;
+                    existingUser.Password = user.Password;
+                    existingUser.IsDeleted = false;
+
+                    if (existingUser.Person is not null)
+                        _mapper.Map(dto, existingUser.Person);
+                    else
+                        existingUser.Person = person;
+
+                    await _userData.UpdateAsync(existingUser);
+
+                    if (existingUser.RolUsers is null || !existingUser.RolUsers.Any())
+                        await _rolUserData.AsignateRolDefault(existingUser);
+
+                    await SendEmailVerificationAsync(existingUser);
+
+                    return _mapper.Map<UserDto>(existingUser);
+                }
+
                 user.Person = person;
-                
+
+                user.IsEmailVerified = false;
+
                 await _userData.AddAsync(user);
 
                 await _rolUserData.AsignateRolDefault(user);
@@ -140,6 +176,8 @@ namespace Business.Services.AuthService
                 if (createduser == null)
                     throw new BusinessException("Error interno: el usuario no pudo ser recuperado tras la creación.");
 
+                await SendEmailVerificationAsync(createduser);
+
                 return _mapper.Map<UserDto>(createduser);
             }
             catch (Exception ex)
@@ -147,8 +185,20 @@ namespace Business.Services.AuthService
                 throw new BusinessException($"Error en el registro del usuario: {ex.Message}", ex);
             }
         }
+        private async Task SendEmailVerificationAsync(User user)
+        {
+            var code = new Random().Next(100000, 999999).ToString();
 
+            var verification = new EmailVerificationCode
+            {
+                UserId = user.Id,
+                Code = code,
+                Expiration = DateTime.UtcNow.AddMinutes(10)
+            };
 
+            await _emailVerificationRepo.AddAsync(verification);
+            await _emailService.SendVerificationCodeEmail(user.Email, code);
+        }
         public async Task RequestPasswordResetAsync(string email)
         {
             var user = await _userData.GetByEmailAsync(email)
@@ -182,6 +232,34 @@ namespace Business.Services.AuthService
             await _passwordResetRepo.UpdateAsync(record);
         }
 
+        public async Task RequestEmailVerificationAsync(string email)
+        {
+            var user = await _userData.GetByEmailAsync(email)
+                ?? throw new ValidationException("Correo no registrado");
+
+            if (user.IsEmailVerified)
+                throw new ValidationException("El correo ya está verificado");
+
+            await SendEmailVerificationAsync(user);
+        }
+
+        public async Task ConfirmEmailVerificationAsync(ConfirmEmailVerificationDto dto)
+        {
+            var user = await _userData.GetByEmailAsync(dto.Email)
+                ?? throw new ValidationException("Usuario no encontrado");
+
+            if (user.IsEmailVerified)
+                return;
+
+            var record = await _emailVerificationRepo.GetValidCodeAsync(user.Id, dto.Code)
+                ?? throw new ValidationException("Código inválido o expirado");
+
+            user.IsEmailVerified = true;
+            await _userData.UpdateAsync(user);
+
+            record.IsUsed = true;
+            await _emailVerificationRepo.UpdateAsync(record);
+        }
         public async Task<bool> UpdatePerson(PersonUpdateDto dto, int userId)
         {
             try
