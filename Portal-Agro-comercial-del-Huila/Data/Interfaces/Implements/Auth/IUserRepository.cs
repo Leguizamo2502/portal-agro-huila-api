@@ -15,6 +15,7 @@ namespace Data.Interfaces.Implements.Auth
         Task<User?> GetDataBasic(int userId);
         Task<bool> ExistsByEmailAsync(string email);
         Task<User?> GetByEmailAsync(string email);
+        Task<User?> GetByDocumentAsync(string identification);
         Task<User> LoginUser(LoginUserDto loginDto);
         Task<ContactDto> GetContactUser(int userId);
         Task<bool> ExistsByDocumentAsync(string identification);

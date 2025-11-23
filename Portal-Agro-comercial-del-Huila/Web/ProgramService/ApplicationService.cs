@@ -98,6 +98,8 @@ namespace Web.ProgramService
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IAuthCookieFactory, AuthCookieFactory>();
 
+            services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
+
            
 
             //Cloudinary
