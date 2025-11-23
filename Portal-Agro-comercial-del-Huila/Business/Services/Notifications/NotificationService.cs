@@ -42,10 +42,10 @@ namespace Business.Services.Notifications
         }
 
 
-        public async Task<IReadOnlyList<NotificationListItemDto>> GetUnreadAsync(int userId, int take = 20, CancellationToken ct = default)
+        public async Task<IEnumerable<NotificationListItemDto>> GetUnreadAsync(int userId, int take = 20, CancellationToken ct = default)
         {
             var items = await _repo.GetUnreadAsync(userId, take, ct);
-            return items.Select(MapToListItem).ToList();
+            return _mapper.Map<IEnumerable<NotificationListItemDto>>(items);
         }
 
         public Task<int> CountUnreadAsync(int userId, CancellationToken ct = default)
@@ -53,10 +53,10 @@ namespace Business.Services.Notifications
             return _repo.CountUnreadAsync(userId, ct);
         }
 
-        public async Task<(IReadOnlyList<NotificationListItemDto> Items, int Total)> GetHistoryAsync(int userId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(IEnumerable<NotificationListItemDto> Items, int Total)> GetHistoryAsync(int userId, int page, int pageSize, CancellationToken ct = default)
         {
             var (entities, total) = await _repo.GetHistoryAsync(userId, page, pageSize, ct);
-            var dtos = entities.Select(MapToListItem).ToList();
+            var dtos = _mapper.Map<IEnumerable<NotificationListItemDto>>(entities);
             return (dtos, total);
         }
 
@@ -65,15 +65,15 @@ namespace Business.Services.Notifications
             return _repo.MarkAsReadAsync(id, userId, ct);
         }
 
-        private static NotificationListItemDto MapToListItem(Notification n) => new()
-        {
-            Id = n.Id,
-            Title = n.Title,
-            Message = n.Message,
-            IsRead = n.IsRead,
-            CreateAt = n.CreateAt,
-            RelatedType = n.RelatedType,
-            RelatedRoute = n.RelatedRoute
-        };
+        //private static NotificationListItemDto MapToListItem(Notification n) => new()
+        //{
+        //    Id = n.Id,
+        //    Title = n.Title,
+        //    Message = n.Message,
+        //    IsRead = n.IsRead,
+        //    CreateAt = n.CreateAt,
+        //    RelatedType = n.RelatedType,
+        //    RelatedRoute = n.RelatedRoute
+        //};
     }
 }
