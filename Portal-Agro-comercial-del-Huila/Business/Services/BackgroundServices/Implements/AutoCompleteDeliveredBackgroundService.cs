@@ -1,4 +1,5 @@
 ﻿using Business.Interfaces.Implements.Notification;
+using Business.Interfaces.Implements.Orders.OrderChat;
 using Business.Services.BackgroundServices.Options;
 using Data.Interfaces.Implements.Auth;
 using Data.Interfaces.Implements.Producers;
@@ -79,7 +80,8 @@ namespace Business.Services.BackgroundServices.Implements
                     var emailItem = itemScope.ServiceProvider.GetRequiredService<IOrderEmailService>();
                     var userRepoItem = itemScope.ServiceProvider.GetRequiredService<IUserRepository>();
                     var producerRepoItem = itemScope.ServiceProvider.GetRequiredService<IProducerRepository>();
-                    var notifSvc = itemScope.ServiceProvider.GetRequiredService<INotificationService>(); // <- en el itemScope
+                    var notifSvc = itemScope.ServiceProvider.GetRequiredService<INotificationService>();
+                    var chatService = itemScope.ServiceProvider.GetRequiredService<IOrderChatService>();
 
                     var order = await dbItem.Set<Order>().FirstOrDefaultAsync(o => o.Id == id, ct);
                     if (order == null || order.IsDeleted || !order.Active) continue;
@@ -94,6 +96,8 @@ namespace Business.Services.BackgroundServices.Implements
 
                     await dbItem.SaveChangesAsync(ct);
                     done++;
+                    await chatService.CloseConversationAsync(order.Id,
+                       "El pedido se completó automáticamente. El chat se cerró.");
 
                     // 2) Emails (opcional, según flag)
                     if (_opts.SendEmails)

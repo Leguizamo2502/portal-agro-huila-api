@@ -1022,6 +1022,87 @@ namespace Entity.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatConversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ChatClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChatClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ChatEnabledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsChatEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("OrderChatConversations");
+                });
+
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("SenderUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("OrderChatMessages");
+                });
+
             modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ConsumerRating", b =>
                 {
                     b.Property<int>("Id")
@@ -3811,6 +3892,28 @@ namespace Entity.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatConversation", b =>
+                {
+                    b.HasOne("Entity.Domain.Models.Implements.Orders.Order", "Order")
+                        .WithOne()
+                        .HasForeignKey("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatConversation", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatMessage", b =>
+                {
+                    b.HasOne("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ConsumerRating", b =>
                 {
                     b.HasOne("Entity.Domain.Models.Implements.Orders.Order", "Order")
@@ -4093,6 +4196,11 @@ namespace Entity.Migrations
             modelBuilder.Entity("Entity.Domain.Models.Implements.Location.Department", b =>
                 {
                     b.Navigation("Cities");
+                });
+
+            modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.ChatOrder.OrderChatConversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("Entity.Domain.Models.Implements.Orders.Order", b =>

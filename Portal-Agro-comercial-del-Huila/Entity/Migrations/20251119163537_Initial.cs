@@ -712,6 +712,57 @@ namespace Entity.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "OrderChatConversations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    IsChatEnabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    ChatEnabledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ChatClosedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ChatClosedReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    Active = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderChatConversations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderChatConversations_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OrderChatMessages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ConversationId = table.Column<int>(type: "int", nullable: false),
+                    SenderUserId = table.Column<int>(type: "int", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    IsSystem = table.Column<bool>(type: "bit", nullable: false),
+                    CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    Active = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderChatMessages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderChatMessages_OrderChatConversations_ConversationId",
+                        column: x => x.ConversationId,
+                        principalTable: "OrderChatConversations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 table: "Category",
                 columns: new[] { "Id", "Active", "CreateAt", "IsDeleted", "Name", "ParentCategoryId" },
@@ -1175,6 +1226,17 @@ namespace Entity.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderChatConversations_OrderId",
+                table: "OrderChatConversations",
+                column: "OrderId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderChatMessages_ConversationId",
+                table: "OrderChatMessages",
+                column: "ConversationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_CityId",
                 table: "Orders",
                 column: "CityId");
@@ -1300,6 +1362,9 @@ namespace Entity.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
+                name: "OrderChatMessages");
+
+            migrationBuilder.DropTable(
                 name: "PasswordResetCodes");
 
             migrationBuilder.DropTable(
@@ -1324,10 +1389,10 @@ namespace Entity.Migrations
                 name: "RolUsers");
 
             migrationBuilder.DropTable(
-                name: "Orders");
+                name: "Modules");
 
             migrationBuilder.DropTable(
-                name: "Modules");
+                name: "OrderChatConversations");
 
             migrationBuilder.DropTable(
                 name: "Farms");
@@ -1340,6 +1405,9 @@ namespace Entity.Migrations
 
             migrationBuilder.DropTable(
                 name: "Rols");
+
+            migrationBuilder.DropTable(
+                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "Products");
