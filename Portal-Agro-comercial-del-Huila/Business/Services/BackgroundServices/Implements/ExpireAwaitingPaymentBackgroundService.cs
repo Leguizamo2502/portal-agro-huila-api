@@ -1,4 +1,5 @@
-﻿using Business.Interfaces.Implements.Notification;                  
+﻿using Business.Interfaces.Implements.Notification;
+using Business.Interfaces.Implements.Orders.OrderChat;
 using Business.Services.BackgroundServices.Options;
 using Data.Interfaces.Implements.Auth;
 using Data.Interfaces.Implements.Producers;
@@ -101,7 +102,8 @@ namespace Business.Services.BackgroundServices.Implements
                     var emailItem = scopeItem.ServiceProvider.GetRequiredService<IOrderEmailService>();
                     var userRepo = scopeItem.ServiceProvider.GetRequiredService<IUserRepository>();
                     var producerRepo = scopeItem.ServiceProvider.GetRequiredService<IProducerRepository>();
-                    var notifSvc = scopeItem.ServiceProvider.GetRequiredService<INotificationService>(); 
+                    var notifSvc = scopeItem.ServiceProvider.GetRequiredService<INotificationService>();
+                    var chatService = scopeItem.ServiceProvider.GetRequiredService<IOrderChatService>();
 
                     // Releer con tracking
                     var order = await dbItem.Set<Order>().FirstOrDefaultAsync(o => o.Id == orderId, ct);
@@ -119,6 +121,8 @@ namespace Business.Services.BackgroundServices.Implements
 
                     await dbItem.SaveChangesAsync(ct);
                     expiredCount++;
+                    await chatService.CloseConversationAsync(order.Id,
+                       "El pedido expiró por no recibir el comprobante de pago. El chat se cerró.");
 
                     // 4) Emails (opcional)
                     if (_opts.SendEmails)

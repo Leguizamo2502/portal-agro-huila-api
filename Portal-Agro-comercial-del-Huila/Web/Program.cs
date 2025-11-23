@@ -4,6 +4,7 @@ using Entity.Validations.interfaces;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Web.Hubs.Implements.Notifications;
+using Web.Hubs.Implements.OrderChat;
 using Web.ProgramService;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +70,7 @@ app.MapControllers();
 
 // Hubs
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<OrderChatHub>("/hubs/orders/chat");
 
 // Migraciones en arranque
 //MigrationManager.MigrateAllDatabases(app.Services, builder.Configuration);
