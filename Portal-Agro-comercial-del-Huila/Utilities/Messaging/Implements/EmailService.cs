@@ -92,5 +92,44 @@ namespace Utilities.Messaging.Implements
 
             await smtpCliente.SendMailAsync(mensaje);
         }
+
+        public async Task SendTwoFactorCodeEmail(string emailReceptor, string verificationCode)
+        {
+            var emailEmisor = _config["CONFIG_EMAIL:EMAIL"]!;
+            var password = _config["CONFIG_EMAIL:PASSWORD"];
+            var host = _config["CONFIG_EMAIL:HOST"];
+            var puerto = int.Parse(_config["CONFIG_EMAIL:PORT"]!);
+
+            var smtpCliente = new SmtpClient(host, puerto)
+            {
+                EnableSsl = true,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(emailEmisor, password)
+            };
+
+            string asunto = "Código de ingreso - Portal Agro Comercial del Huila";
+            string cuerpoHtml = $@"
+                <!DOCTYPE html>
+                <html lang='es'>
+                <head><meta charset='UTF-8'><title>Código de verificación</title></head>
+                <body style='font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;'>
+                    <div style='max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);'>
+                        <h2 style='color: #4a5568;'>Verificación en dos pasos</h2>
+                        <p style='font-size: 16px; color: #2d3748;'>Usa este código para completar tu inicio de sesión:</p>
+                        <div style='font-size: 28px; font-weight: bold; color: #667eea; margin: 20px 0;'>{verificationCode}</div>
+                        <p style='font-size: 14px; color: #718096;'>El código vence en 10 minutos.</p>
+                        <br>
+                        <p style='font-size: 12px; color: #a0aec0;'>Portal Agro-Comercial del Huila © 2025</p>
+                    </div>
+                </body>
+                </html>";
+
+            var mensaje = new MailMessage(emailEmisor, emailReceptor, asunto, cuerpoHtml)
+            {
+                IsBodyHtml = true
+            };
+
+            await smtpCliente.SendMailAsync(mensaje);
+        }
     }
 }

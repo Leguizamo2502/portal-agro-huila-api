@@ -22,10 +22,11 @@ namespace Business.Services.AuthService
         private readonly IPasswordResetCodeRepository _passwordResetRepo;
         private readonly IPersonRepository _personRepository;
         private readonly IEmailVerificationCodeRepository _emailVerificationRepo;
+        private readonly ITwoFactorCodeRepository _twoFactorCodeRepository;
 
         public AuthService(IUserRepository userData,ILogger<AuthService> logger, IRolUserRepository rolUserData, IMapper mapper,
             ISendCode emailService, IPasswordResetCodeRepository passwordResetRepo,IPersonRepository personRepository,
-            IEmailVerificationCodeRepository emailVerificationCodeRepository)
+            IEmailVerificationCodeRepository emailVerificationCodeRepository, ITwoFactorCodeRepository twoFactorCodeRepository)
         {
             _logger = logger;
             _userData = userData;
@@ -35,6 +36,76 @@ namespace Business.Services.AuthService
             _emailService = emailService;
             _passwordResetRepo = passwordResetRepo;
             _emailVerificationRepo = emailVerificationCodeRepository;
+            _twoFactorCodeRepository = twoFactorCodeRepository;
+        }
+
+
+        public async Task<LoginAttemptResult> PrepareLoginAsync(LoginUserDto dto)
+        {
+            if (dto == null) throw new ValidationException("Datos inválidos.");
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+                throw new ValidationException("Las credenciales son obligatorias.");
+
+            dto.Password = EncriptePassword.EncripteSHA256(dto.Password);
+            var user = await _userData.LoginUser(dto);
+
+            if (user.IsTwoFactorEnabled)
+            {
+                await _twoFactorCodeRepository.InvalidateActiveCodesAsync(user.Id);
+                var code = new Random().Next(100000, 999999).ToString();
+
+                var twoFactor = new TwoFactorCode
+                {
+                    UserId = user.Id,
+                    Code = code,
+                    Expiration = DateTime.UtcNow.AddMinutes(10)
+                };
+
+                await _twoFactorCodeRepository.AddAsync(twoFactor);
+                await _emailService.SendTwoFactorCodeEmail(user.Email, code);
+
+                return new LoginAttemptResult
+                {
+                    RequiresTwoFactor = true,
+                    User = user
+                };
+            }
+
+            return new LoginAttemptResult { RequiresTwoFactor = false, User = user };
+        }
+
+        public async Task<User> ConfirmTwoFactorLoginAsync(TwoFactorVerificationDto dto)
+        {
+            if (dto == null) throw new ValidationException("Datos inválidos.");
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
+                throw new ValidationException("El correo y el código son obligatorios.");
+
+            var user = await _userData.GetByEmailAsync(dto.Email)
+                ?? throw new UnauthorizedAccessException("Usuario no encontrado");
+
+            if (!user.IsTwoFactorEnabled)
+                throw new UnauthorizedAccessException("La verificación en dos pasos no está activa");
+
+            var record = await _twoFactorCodeRepository.GetValidCodeAsync(user.Id, dto.Code)
+                ?? throw new UnauthorizedAccessException("Código inválido o expirado");
+
+            record.IsUsed = true;
+            await _twoFactorCodeRepository.UpdateAsync(record);
+
+            return user;
+        }
+
+        public async Task UpdateTwoFactorPreferenceAsync(int userId, bool enable)
+        {
+            var user = await _userData.GetByIdAsync(userId)
+                ?? throw new ValidationException("Usuario no encontrado");
+
+            user.IsTwoFactorEnabled = enable;
+
+            await _userData.UpdateAsync(user);
+
+            if (!enable)
+                await _twoFactorCodeRepository.InvalidateActiveCodesAsync(userId);
         }
 
         public async Task ChangePasswordAsync(ChangePasswordDto dto, int userId)
@@ -139,6 +210,7 @@ namespace Business.Services.AuthService
                 var user = _mapper.Map<User>(dto);
 
                 user.Password = EncriptePassword.EncripteSHA256(user.Password);
+                user.IsTwoFactorEnabled = false;
 
                 var existingUser = existingByDocument ?? existingByEmail;
 

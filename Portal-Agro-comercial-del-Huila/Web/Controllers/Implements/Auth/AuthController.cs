@@ -72,7 +72,14 @@ namespace Web.Controllers.Implements.Auth
         {
             try
             {
-                var (access, refresh, csrf) = await _token.GenerateTokensAsync(dto);
+                var loginResult = await _authService.PrepareLoginAsync(dto);
+
+                if (loginResult.RequiresTwoFactor)
+                {
+                    return Ok(new { isSuccess = true, requiresTwoFactor = true, message = "Código de verificación enviado al correo" });
+                }
+
+                var (access, refresh, csrf) = await _token.GenerateTokensForUserAsync(loginResult.User);
 
                 var now = DateTime.UtcNow;
 
@@ -91,12 +98,16 @@ namespace Web.Controllers.Implements.Auth
                     csrf,
                     _cookieFactory.CsrfCookieOptions(now.AddDays(_jwt.RefreshTokenExpirationDays)));
 
-                return Ok(new { isSuccess = true, message = "Login exitoso" });
+                return Ok(new { isSuccess = true, requiresTwoFactor = false, message = "Login exitoso" });
             }
             catch (UnauthorizedAccessException)
             {
                 // Mensaje controlado y status 401
                 return Unauthorized(new { isSuccess = false, message = "Credenciales inválidas o correo no verificado" });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { isSuccess = false, message = ex.Message });
             }
         }
 
@@ -145,6 +156,71 @@ namespace Web.Controllers.Implements.Auth
             return Ok(new { isSuccess = true });
         }
 
+        [HttpPost("login/two-factor")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ConfirmTwoFactor([FromBody] TwoFactorVerificationDto dto)
+        {
+            try
+            {
+                var user = await _authService.ConfirmTwoFactorLoginAsync(dto);
+
+                var (access, refresh, csrf) = await _token.GenerateTokensForUserAsync(user);
+                var now = DateTime.UtcNow;
+
+                Response.Cookies.Append(
+                    _cookieSettings.AccessTokenName,
+                    access,
+                    _cookieFactory.AccessCookieOptions(now.AddMinutes(_jwt.AccessTokenExpirationMinutes)));
+
+                Response.Cookies.Append(
+                    _cookieSettings.RefreshTokenName,
+                    refresh,
+                    _cookieFactory.RefreshCookieOptions(now.AddDays(_jwt.RefreshTokenExpirationDays)));
+
+                Response.Cookies.Append(
+                    _cookieSettings.CsrfCookieName,
+                    csrf,
+                    _cookieFactory.CsrfCookieOptions(now.AddDays(_jwt.RefreshTokenExpirationDays)));
+
+                return Ok(new { isSuccess = true, message = "Login exitoso" });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { isSuccess = false, message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { isSuccess = false, message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPut("two-factor")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UpdateTwoFactor([FromBody] TwoFactorPreferenceDto dto)
+        {
+            var userId = HttpContext.GetUserId();
+
+            try
+            {
+                await _authService.UpdateTwoFactorPreferenceAsync(userId, dto.Enable);
+                var message = dto.Enable ? "Verificación en dos pasos activada" : "Verificación en dos pasos desactivada";
+                return Ok(new { isSuccess = true, message });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { isSuccess = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar la preferencia de 2FA para el usuario {UserId}", userId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { isSuccess = false, message = "Error interno del servidor" });
+            }
+        }
 
         /// <summary>Logout: revoca refresh token y borra cookies.</summary>
         [HttpPost("logout")]
