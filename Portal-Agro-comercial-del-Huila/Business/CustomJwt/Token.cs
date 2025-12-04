@@ -64,10 +64,18 @@ namespace Business.CustomJwt
             // 1) Validar credenciales
             dto.Password = EncriptePassword.EncripteSHA256(dto.Password);
             var user = await _userData.LoginUser(dto);
+            return await GenerateTokensForUserAsync(user);
+        }
 
-
-            // 2) Generar access token con roles
+        // 2) Generar access token con roles
+        public async Task<(string AccessToken, string RefreshToken, string CsrfToken)> GenerateTokensForUserAsync(User user)
+        {
             var roles = await _rolUserData.GetRolesUserAsync(user.Id);
+            return await IssueTokensAsync(user, roles);
+        }
+
+        private async Task<(string AccessToken, string RefreshToken, string CsrfToken)> IssueTokensAsync(User user, IEnumerable<string> roles)
+        {
             var accessToken = BuildAccessToken(user, roles);
 
             // 3) Generar refresh token (plain) y persistir su hash HMAC-SHA512 con pepper

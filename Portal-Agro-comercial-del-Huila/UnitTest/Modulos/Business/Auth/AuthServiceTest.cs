@@ -28,6 +28,7 @@ namespace UnitTest.Modulos.Business.Auth
         private readonly Mock<IPasswordResetCodeRepository> _passwordResetRepositoryMock;
         private readonly Mock<IPersonRepository> _personRepositoryMock;
         private readonly Mock<IEmailVerificationCodeRepository> _emailVerificationRepositoryMock;
+        private readonly Mock<ITwoFactorCodeRepository> _twoFactorRepositoryMock;
         private readonly AuthService _service;
 
         public AuthServiceTest()
@@ -40,6 +41,7 @@ namespace UnitTest.Modulos.Business.Auth
             _passwordResetRepositoryMock = new Mock<IPasswordResetCodeRepository>();
             _emailVerificationRepositoryMock = new Mock<IEmailVerificationCodeRepository>();
             _personRepositoryMock = new Mock<IPersonRepository>();
+            _twoFactorRepositoryMock = new Mock<ITwoFactorCodeRepository>();
 
             _service = new AuthService(
                 _userRepositoryMock.Object,
@@ -49,7 +51,8 @@ namespace UnitTest.Modulos.Business.Auth
                 _emailServiceMock.Object,
                 _passwordResetRepositoryMock.Object,
                 _personRepositoryMock.Object,
-                _emailVerificationRepositoryMock.Object);
+                _emailVerificationRepositoryMock.Object,
+                 _twoFactorRepositoryMock.Object);
         }
 
         [Fact]

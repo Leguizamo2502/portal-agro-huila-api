@@ -26,6 +26,7 @@ namespace Entity.Domain.Models.Implements.Auth
         public ICollection<ConsumerRating> ConsumerRatingsReceived { get; set; } = [];
 
         public bool IsEmailVerified { get; set; }
+        public bool IsTwoFactorEnabled { get; set; }
 
     }
 }

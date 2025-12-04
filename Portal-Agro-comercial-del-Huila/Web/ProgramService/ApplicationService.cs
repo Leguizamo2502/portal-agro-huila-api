@@ -100,6 +100,8 @@ namespace Web.ProgramService
 
             services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
 
+            services.AddScoped<ITwoFactorCodeRepository, TwoFactorCodeRepository>();
+
            
 
             //Cloudinary

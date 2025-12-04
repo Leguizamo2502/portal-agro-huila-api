@@ -1,6 +1,7 @@
 ﻿using Business.CustomJwt;
 using Business.Interfaces.Implements.Auth;
 using Business.Interfaces.Implements.Security.Mes;
+using Entity.Domain.Models.Implements.Auth;
 using Entity.Domain.Models.Implements.Auth.Token;
 using Entity.DTOs.Auth;
 using Entity.DTOs.Security.Me;
@@ -114,8 +115,15 @@ namespace UnitTest.Modulos.Controller.Auth
         {
             // Arrange
             var controller = CreateController();
+            _authServiceMock
+                .Setup(s => s.PrepareLoginAsync(It.IsAny<LoginUserDto>()))
+                .ReturnsAsync(new LoginAttemptResult
+                {
+                    RequiresTwoFactor = false,
+                    User = new User { Id = 1, Email = "demo@test.com" }
+                });
             _tokenMock
-                .Setup(t => t.GenerateTokensAsync(It.IsAny<LoginUserDto>()))
+                .Setup(t => t.GenerateTokensForUserAsync(It.IsAny<User>()))
                 .ReturnsAsync(("access-token", "refresh-token", "csrf-token"));
 
             // Act
@@ -133,8 +141,15 @@ namespace UnitTest.Modulos.Controller.Auth
         {
             // Arrange
             var controller = CreateController();
+            _authServiceMock
+                .Setup(s => s.PrepareLoginAsync(It.IsAny<LoginUserDto>()))
+                .ReturnsAsync(new LoginAttemptResult
+                {
+                    RequiresTwoFactor = false,
+                    User = new User { Id = 2, Email = "demo@test.com" }
+                });
             _tokenMock
-                .Setup(t => t.GenerateTokensAsync(It.IsAny<LoginUserDto>()))
+                .Setup(t => t.GenerateTokensForUserAsync(It.IsAny<User>()))
                 .ThrowsAsync(new UnauthorizedAccessException());
 
             // Act
@@ -142,6 +157,25 @@ namespace UnitTest.Modulos.Controller.Auth
 
             // Assert
             Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task Login_ShouldReturnRequiresTwoFactor_WhenEnabled()
+        {
+            // Arrange
+            var controller = CreateController();
+            _authServiceMock
+                .Setup(s => s.PrepareLoginAsync(It.IsAny<LoginUserDto>()))
+                .ReturnsAsync(new LoginAttemptResult { RequiresTwoFactor = true, User = new User { Id = 5 } });
+
+            // Act
+            var result = await controller.Login(new LoginUserDto(), CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var payload = okResult.Value as dynamic;
+            Assert.True((bool)payload?.requiresTwoFactor);
+            Assert.Empty(controller.HttpContext.Response.Headers["Set-Cookie"]);
         }
 
         [Fact]

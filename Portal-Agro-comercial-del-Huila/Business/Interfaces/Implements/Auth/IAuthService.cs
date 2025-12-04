@@ -1,4 +1,5 @@
-﻿using Entity.DTOs.Auth;
+﻿using Entity.Domain.Models.Implements.Auth;
+using Entity.DTOs.Auth;
 using Entity.DTOs.Auth.User;
 
 namespace Business.Interfaces.Implements.Auth
@@ -17,5 +18,8 @@ namespace Business.Interfaces.Implements.Auth
 
         Task<bool> UpdatePerson(PersonUpdateDto dto, int userId);
 
+        Task<LoginAttemptResult> PrepareLoginAsync(LoginUserDto dto);
+        Task<User> ConfirmTwoFactorLoginAsync(TwoFactorVerificationDto dto);
+        Task UpdateTwoFactorPreferenceAsync(int userId, bool enable);
     }
 }

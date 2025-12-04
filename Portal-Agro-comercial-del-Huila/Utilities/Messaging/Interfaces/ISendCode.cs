@@ -10,5 +10,6 @@ namespace Utilities.Messaging.Interfaces
     {
         Task SendRecoveryCodeEmail(string emailReceptor, string recoveryCode);
         Task SendVerificationCodeEmail(string emailReceptor, string verificationCode);
+        Task SendTwoFactorCodeEmail(string emailReceptor, string verificationCode);
     }
 }
